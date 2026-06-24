@@ -32,6 +32,8 @@ const assetItems: Array<{ Icon: SidebarIcon; label: string; count: number }> = [
   { Icon: BookIcon, label: '小说', count: 3 },
 ];
 
+const mockUser = { name: '未登录用户', status: '点击登录' };
+
 export function App() {
   const [theme, setTheme] = usePersistentTheme();
   const [isSidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -46,7 +48,7 @@ export function App() {
     >
       <aside
         className={`canvasflow-sidebar ${isSidebarCollapsed ? 'canvasflow-sidebar--collapsed' : ''} ${isSidebarPreviewed ? 'canvasflow-sidebar--previewed' : ''}`}
-        aria-label="CanvasFlow 侧边栏"
+        aria-label="Endless Creation 侧边栏"
         onMouseEnter={() => {
           if (isSidebarCollapsed) setSidebarPreviewed(true);
         }}
@@ -79,7 +81,7 @@ export function App() {
           </button>
         </header>
 
-        <nav className="canvasflow-nav" aria-label="CanvasFlow 导航">
+        <nav className="canvasflow-nav" aria-label="Endless Creation 导航">
           {sidebarNavItems.map(({ Icon, ...item }) => (
             <button
               aria-current={item.active ? 'page' : undefined}
@@ -113,23 +115,26 @@ export function App() {
         </nav>
 
         <footer className="canvasflow-footer">
-          <div className="canvasflow-footer__row">
-            <span className="canvasflow-footer__label">主题</span>
+          <div className="canvasflow-user-row">
+            <button className="canvasflow-user-button" type="button" aria-label={`${mockUser.name}，${mockUser.status}`}>
+              <span className="canvasflow-user-avatar" aria-hidden="true">
+                <UserIcon />
+              </span>
+              <span className="canvasflow-user-copy">
+                <span className="canvasflow-user-name">{mockUser.name}</span>
+                <span className="canvasflow-user-status">{mockUser.status}</span>
+              </span>
+            </button>
             <button
+              aria-label={theme === 'dark' ? '切换到浅色主题' : '切换到深色主题'}
               aria-pressed={theme === 'light'}
               className="canvasflow-theme-button"
               onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
               type="button"
             >
               <ThemeIcon />
-              <span className="canvasflow-theme-button__label">{theme === 'dark' ? '浅色' : '深色'}</span>
             </button>
           </div>
-          <div className="canvasflow-footer__row canvasflow-footer__row--muted">
-            <span>本地存储</span>
-            <span>1.2 KB</span>
-          </div>
-          <div className="canvasflow-storage" aria-hidden="true"><span /></div>
         </footer>
       </aside>
 

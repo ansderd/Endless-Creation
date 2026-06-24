@@ -311,26 +311,14 @@
 
 .canvasflow-footer {
   display: grid;
-  gap: 14px;
-  height: 100px;
-  padding: 16px 14px;
+  align-items: center;
+  height: 86px;
+  padding: 14px;
   border-top: 1px solid var(--sidebar-divider);
   color: var(--sidebar-text-muted);
   background: var(--sidebar-bg);
   font-size: 14px;
   font-weight: 600;
-}
-
-.canvasflow-footer__row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  min-width: 0;
-}
-
-.canvasflow-footer__row--muted {
-  color: var(--sidebar-text-muted);
 }
 
 .canvasflow-theme-button {
@@ -370,19 +358,81 @@
   transform: translateY(-1px);
 }
 
-.canvasflow-storage {
-  height: 3px;
-  overflow: hidden;
-  border-radius: 999px;
-  background: var(--badge-bg);
+.canvasflow-user-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
 }
 
-.canvasflow-storage span {
-  display: block;
-  width: 12%;
-  height: 100%;
-  border-radius: inherit;
-  background: linear-gradient(90deg, var(--brand-blue), var(--brand-cyan));
+.canvasflow-user-button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1 1 auto;
+  width: auto;
+  min-width: 0;
+  padding: 8px;
+  border: 0;
+  border-radius: 14px;
+  color: var(--sidebar-text);
+  background: transparent;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background 140ms ease, color 140ms ease;
+}
+
+.canvasflow-user-button:hover {
+  color: var(--sidebar-text-strong);
+  background: var(--sidebar-hover);
+}
+
+.canvasflow-user-button:focus-visible {
+  outline: 2px solid var(--brand-blue);
+  outline-offset: 2px;
+}
+
+.canvasflow-user-avatar {
+  display: grid;
+  width: 36px;
+  height: 36px;
+  place-items: center;
+  flex: 0 0 auto;
+  border-radius: 999px;
+  color: #ffffff;
+  background: linear-gradient(135deg, var(--brand-blue), var(--brand-cyan));
+  box-shadow: 0 8px 18px rgba(75, 128, 255, 0.22);
+}
+
+.canvasflow-user-avatar svg {
+  width: 19px;
+  height: 19px;
+}
+
+.canvasflow-user-copy {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.canvasflow-user-name,
+.canvasflow-user-status {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.canvasflow-user-name {
+  color: var(--sidebar-text-strong);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.canvasflow-user-status {
+  color: var(--sidebar-text-muted);
+  font-size: 12px;
+  font-weight: 600;
 }
 
 .blank-workspace {
@@ -529,29 +579,30 @@
 }
 
 .canvasflow-sidebar--collapsed.canvasflow-sidebar--previewed .canvasflow-footer {
-  align-content: stretch;
+  align-content: center;
   justify-items: stretch;
-  height: 100px;
-  padding: 16px 14px;
+  height: 86px;
+  padding: 14px;
 }
 
-.canvasflow-sidebar--collapsed .canvasflow-footer__label,
-.canvasflow-sidebar--collapsed .canvasflow-footer__row--muted,
-.canvasflow-sidebar--collapsed .canvasflow-storage,
+.canvasflow-sidebar--collapsed .canvasflow-user-row {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+}
+
+.canvasflow-sidebar--collapsed.canvasflow-sidebar--previewed .canvasflow-user-row {
+  display: flex;
+  justify-items: stretch;
+}
+
+.canvasflow-sidebar--collapsed .canvasflow-user-copy,
 .canvasflow-sidebar--collapsed .canvasflow-theme-button__label {
   display: none;
 }
 
-.canvasflow-sidebar--collapsed.canvasflow-sidebar--previewed .canvasflow-footer__label {
-  display: inline;
-}
-
-.canvasflow-sidebar--collapsed.canvasflow-sidebar--previewed .canvasflow-footer__row--muted {
-  display: flex;
-}
-
-.canvasflow-sidebar--collapsed.canvasflow-sidebar--previewed .canvasflow-storage {
-  display: block;
+.canvasflow-sidebar--collapsed.canvasflow-sidebar--previewed .canvasflow-user-copy {
+  display: grid;
 }
 
 .canvasflow-sidebar--collapsed .canvasflow-theme-button {
@@ -561,9 +612,29 @@
   border-radius: 12px;
 }
 
+.canvasflow-sidebar--collapsed .canvasflow-user-button {
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+}
+
+.canvasflow-sidebar--collapsed .canvasflow-user-avatar {
+  width: 36px;
+  height: 36px;
+}
+
 .canvasflow-sidebar--collapsed.canvasflow-sidebar--previewed .canvasflow-theme-button {
   width: 40px;
   height: 40px;
   padding: 0;
   border-radius: 12px;
+}
+
+.canvasflow-sidebar--collapsed.canvasflow-sidebar--previewed .canvasflow-user-button {
+  justify-content: flex-start;
+  flex: 1 1 auto;
+  width: auto;
+  height: auto;
+  padding: 8px;
 }
