@@ -43,7 +43,10 @@ export function App() {
           <span className="canvasflow-brand__mark" aria-hidden="true">
             <AddSquareIcon />
           </span>
-          <span className="canvasflow-brand__name">Endless Creation</span>
+          <span className="canvasflow-brand__name" aria-label="Endless Creation">
+            <span>Endless</span>
+            <span>Creation</span>
+          </span>
           <button className="canvasflow-collapse" aria-label="折叠侧边栏" type="button">
             <CollapseIcon />
           </button>

@@ -14,7 +14,7 @@
   --badge-text: #6F7280;
 
   display: grid;
-  grid-template-columns: 310px minmax(0, 1fr);
+  grid-template-columns: 248px minmax(0, 1fr);
   min-height: 100vh;
   color: var(--ink);
   background: var(--bg);
@@ -39,7 +39,7 @@
 .canvasflow-sidebar {
   display: grid;
   grid-template-rows: 74px 1fr auto;
-  width: 310px;
+  width: 248px;
   height: 100vh;
   min-height: 0;
   overflow: hidden;
@@ -55,9 +55,9 @@
 .canvasflow-brand {
   display: flex;
   align-items: center;
-  gap: 14px;
-  height: 74px;
-  padding: 0 20px;
+  gap: 12px;
+  height: 86px;
+  padding: 0 16px;
   border-bottom: 1px solid var(--sidebar-border);
 }
 
@@ -88,14 +88,21 @@
   background: linear-gradient(90deg, var(--brand-cyan), var(--brand-blue));
   background-clip: text;
   color: #46C7E8;
-  font-size: 22px;
-  font-weight: 700;
-  letter-spacing: -0.03em;
-  line-height: 1;
+  display: grid;
+  gap: 0;
+  font-family: "Segoe Print", "Comic Sans MS", "Bradley Hand ITC", cursive;
+  font-size: 21px;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  line-height: 0.92;
   text-overflow: ellipsis;
   white-space: nowrap;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
+}
+
+.canvasflow-brand__name span:last-child {
+  margin-left: 32px;
 }
 
 .app-shell[data-theme='light'] .canvasflow-brand__name {
@@ -142,7 +149,7 @@
   align-content: start;
   gap: 2px;
   min-height: 0;
-  padding: 22px 20px 0;
+  padding: 18px 14px 0;
 }
 
 .canvasflow-nav__item,
@@ -162,7 +169,7 @@
 .canvasflow-nav__item {
   gap: 14px;
   height: 52px;
-  padding: 0 10px;
+  padding: 0 9px;
   border-radius: 10px;
   font-size: 17px;
   font-weight: 600;
@@ -219,8 +226,8 @@
 .canvasflow-subnav {
   display: grid;
   gap: 0;
-  margin-left: 18px;
-  padding-left: 24px;
+  margin-left: 16px;
+  padding-left: 18px;
   border-left: 1px solid var(--sidebar-divider);
 }
 
@@ -257,7 +264,7 @@
   display: grid;
   gap: 14px;
   height: 100px;
-  padding: 16px 20px;
+  padding: 16px 14px;
   border-top: 1px solid var(--sidebar-divider);
   color: var(--sidebar-text-muted);
   background: var(--sidebar-bg);
