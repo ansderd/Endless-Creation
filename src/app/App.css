@@ -337,11 +337,11 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  height: 34px;
-  padding: 0 14px;
+  width: 40px;
+  height: 40px;
+  padding: 0;
   border: 0;
-  border-radius: 10px;
+  border-radius: 12px;
   color: var(--sidebar-text-strong);
   background: var(--badge-bg);
   font: inherit;
@@ -354,6 +354,10 @@
 .canvasflow-theme-button svg {
   width: 16px;
   height: 16px;
+}
+
+.canvasflow-theme-button__label {
+  display: none;
 }
 
 .app-shell[data-theme='light'] .canvasflow-theme-button {
@@ -538,8 +542,7 @@
   display: none;
 }
 
-.canvasflow-sidebar--collapsed.canvasflow-sidebar--previewed .canvasflow-footer__label,
-.canvasflow-sidebar--collapsed.canvasflow-sidebar--previewed .canvasflow-theme-button__label {
+.canvasflow-sidebar--collapsed.canvasflow-sidebar--previewed .canvasflow-footer__label {
   display: inline;
 }
 
@@ -559,8 +562,8 @@
 }
 
 .canvasflow-sidebar--collapsed.canvasflow-sidebar--previewed .canvasflow-theme-button {
-  width: auto;
-  height: 34px;
-  padding: 0 14px;
-  border-radius: 10px;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border-radius: 12px;
 }
