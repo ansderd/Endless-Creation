@@ -32,7 +32,6 @@ export function AddSquareIcon(props: IconProps) {
 export function CollapseIcon(props: IconProps) {
   return (
     <SvgIcon {...props}>
-      <rect x="4" y="5" width="16" height="14" rx="3" />
       <path d="M9 5v14M15 9l-3 3 3 3" />
     </SvgIcon>
   );
