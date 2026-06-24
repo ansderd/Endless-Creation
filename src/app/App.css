@@ -446,11 +446,13 @@
 }
 
 .canvasflow-sidebar--collapsed .canvasflow-collapse {
+  display: none;
   width: 32px;
   height: 32px;
 }
 
 .canvasflow-sidebar--collapsed.canvasflow-sidebar--previewed .canvasflow-collapse {
+  display: block;
   width: 36px;
   height: 36px;
 }
