@@ -159,6 +159,35 @@ export function ChevronRightIcon(props: IconProps) {
   );
 }
 
+
+export function BillingIcon(props: IconProps) {
+  return (
+    <SvgIcon {...props}>
+      <rect x="4" y="7" width="16" height="11" rx="2" />
+      <path d="M4 10h16M8 14h4" />
+    </SvgIcon>
+  );
+}
+
+export function HelpIcon(props: IconProps) {
+  return (
+    <SvgIcon {...props}>
+      <circle cx="12" cy="12" r="8" />
+      <path d="M9.8 9.5a2.4 2.4 0 0 1 4.5 1.2c0 1.8-2.3 2-2.3 3.6" />
+      <path d="M12 17.2h.01" />
+    </SvgIcon>
+  );
+}
+
+export function LogoutIcon(props: IconProps) {
+  return (
+    <SvgIcon {...props}>
+      <path d="M9 5H6.5A2.5 2.5 0 0 0 4 7.5v9A2.5 2.5 0 0 0 6.5 19H9" />
+      <path d="M14 8l4 4-4 4M18 12H9" />
+    </SvgIcon>
+  );
+}
+
 export function SunIcon(props: IconProps) {
   return (
     <SvgIcon {...props}>

@@ -1,15 +1,18 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { ComponentType, SVGProps } from 'react';
 import type { ThemeMode } from '../types/workspace';
 import { rendererBridge } from '../services/rendererBridge';
 import {
   AddSquareIcon,
+  BillingIcon,
   BookIcon,
   ChevronDownIcon,
   ChevronRightIcon,
   CollapseIcon,
   FolderIcon,
+  HelpIcon,
   ImageWorkbenchIcon,
+  LogoutIcon,
   MoonIcon,
   PenBookIcon,
   ProjectIcon,
@@ -32,7 +35,6 @@ type ActiveNavId =
   | 'video-workbench'
   | 'prompts'
   | 'assets'
-  | 'settings'
   | 'asset-role'
   | 'asset-scene'
   | 'asset-script'
@@ -48,7 +50,6 @@ const sidebarNavItems: Array<{ id: PrimaryNavId; Icon: SidebarIcon; label: strin
   { id: 'video-workbench', Icon: VideoIcon, label: '视频工作台' },
   { id: 'prompts', Icon: PromptIcon, label: '提示词库' },
   { id: 'assets', Icon: FolderIcon, label: '资产管理' },
-  { id: 'settings', Icon: SettingsIcon, label: '设置' },
 ];
 
 const assetItems: Array<{ id: ActiveNavId; Icon: SidebarIcon; label: string; count: number }> = [
@@ -58,7 +59,7 @@ const assetItems: Array<{ id: ActiveNavId; Icon: SidebarIcon; label: string; cou
   { id: 'asset-novel', Icon: BookIcon, label: '小说', count: 3 },
 ];
 
-const mockUser = { name: '未登录用户', status: '点击登录' };
+const mockUser = { name: 'John Doe', email: 'john@example.com', initials: 'JD' };
 
 export function App() {
   const [theme, setTheme] = usePersistentTheme();
@@ -66,9 +67,28 @@ export function App() {
   const [isSidebarPreviewed, setSidebarPreviewed] = useState(false);
   const [activeNavId, setActiveNavId] = useState<ActiveNavId>('projects');
   const [isAssetMenuExpanded, setAssetMenuExpanded] = useState(true);
+  const [isUserMenuOpen, setUserMenuOpen] = useState(false);
+  const userMenuRef = useRef<HTMLDivElement>(null);
   const ThemeIcon = theme === 'dark' ? SunIcon : MoonIcon;
   const AssetChevronIcon = isAssetMenuExpanded ? ChevronDownIcon : ChevronRightIcon;
   const isSidebarVisuallyCollapsed = isSidebarCollapsed && !isSidebarPreviewed;
+
+  useEffect(() => {
+    if (!isUserMenuOpen) return;
+
+    function closeOnOutsideClick(event: MouseEvent) {
+      if (!userMenuRef.current?.contains(event.target as Node)) {
+        setUserMenuOpen(false);
+      }
+    }
+
+    document.addEventListener('mousedown', closeOnOutsideClick);
+    return () => document.removeEventListener('mousedown', closeOnOutsideClick);
+  }, [isUserMenuOpen]);
+
+  useEffect(() => {
+    if (isSidebarCollapsed) setUserMenuOpen(false);
+  }, [isSidebarCollapsed]);
 
   return (
     <div
@@ -163,16 +183,40 @@ export function App() {
           })}
         </nav>
 
-        <footer className="canvasflow-footer">
+        <footer className="canvasflow-footer" ref={userMenuRef}>
+          {isUserMenuOpen && !isSidebarCollapsed && (
+            <div className="canvasflow-user-menu" role="menu" aria-label="User menu">
+              <div className="canvasflow-user-menu__identity">
+                <strong>{mockUser.name}</strong>
+                <span>{mockUser.email}</span>
+              </div>
+              <div className="canvasflow-user-menu__divider" />
+              <button className="canvasflow-user-menu__item" type="button" role="menuitem"><UserIcon />Profile</button>
+              <button className="canvasflow-user-menu__item" type="button" role="menuitem"><SettingsIcon />Settings</button>
+              <button className="canvasflow-user-menu__item" type="button" role="menuitem"><BillingIcon />Billing</button>
+              <div className="canvasflow-user-menu__divider" />
+              <button className="canvasflow-user-menu__item" type="button" role="menuitem"><HelpIcon />Help & Support</button>
+              <div className="canvasflow-user-menu__divider" />
+              <button className="canvasflow-user-menu__item canvasflow-user-menu__item--danger" type="button" role="menuitem"><LogoutIcon />Log out</button>
+            </div>
+          )}
+
           <div className="canvasflow-user-row">
-            <button className="canvasflow-user-button" type="button" aria-label={`${mockUser.name}，${mockUser.status}`}>
-              <span className="canvasflow-user-avatar" aria-hidden="true">
-                <UserIcon />
-              </span>
+            <button
+              aria-expanded={isSidebarCollapsed ? undefined : isUserMenuOpen}
+              aria-label={mockUser.name}
+              className="canvasflow-user-button"
+              onClick={() => {
+                if (isSidebarCollapsed) return;
+                setUserMenuOpen((current) => !current);
+              }}
+              type="button"
+            >
+              <span className="canvasflow-user-avatar" aria-hidden="true">{mockUser.initials}</span>
               <span className="canvasflow-user-copy">
                 <span className="canvasflow-user-name">{mockUser.name}</span>
-                <span className="canvasflow-user-status">{mockUser.status}</span>
               </span>
+              <span className="canvasflow-user-chevron" aria-hidden="true"><ChevronDownIcon /></span>
             </button>
             <button
               aria-label={theme === 'dark' ? '切换到浅色主题' : '切换到深色主题'}

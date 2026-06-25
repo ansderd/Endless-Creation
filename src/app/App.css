@@ -320,13 +320,14 @@
 }
 
 .canvasflow-footer {
+  position: relative;
   display: grid;
   align-items: center;
   align-self: end;
   box-sizing: border-box;
   width: 100%;
   margin-top: auto;
-  height: 86px;
+  height: 92px;
   padding: 14px;
   border-top: 1px solid var(--sidebar-divider);
   color: var(--sidebar-text-muted);
@@ -339,18 +340,18 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 40px;
-  height: 40px;
+  width: 38px;
+  height: 38px;
   padding: 0;
-  border: 0;
+  border: 1px solid var(--sidebar-divider);
   border-radius: 12px;
   color: var(--sidebar-text-strong);
-  background: var(--badge-bg);
+  background: var(--sidebar-bg-elevated);
   font: inherit;
   font-size: 14px;
   font-weight: 700;
   cursor: pointer;
-  transition: background 140ms ease, transform 140ms ease;
+  transition: background 140ms ease, border-color 140ms ease, transform 140ms ease;
 }
 
 .canvasflow-theme-button svg {
@@ -363,12 +364,14 @@
 }
 
 .app-shell[data-theme='light'] .canvasflow-theme-button {
-  color: var(--sidebar-text-strong);
-  background: #F1F5FA;
+  color: #334155;
+  background: #ffffff;
+  border-color: #E5EAF1;
 }
 
 .canvasflow-theme-button:hover {
   background: var(--sidebar-hover);
+  border-color: var(--sidebar-border);
   transform: translateY(-1px);
 }
 
@@ -386,20 +389,35 @@
   flex: 1 1 auto;
   width: auto;
   min-width: 0;
-  padding: 8px;
-  border: 0;
-  border-radius: 14px;
-  color: var(--sidebar-text);
-  background: transparent;
+  height: 48px;
+  padding: 6px 10px 6px 8px;
+  border: 1px solid rgba(148, 163, 184, 0.32);
+  border-radius: 16px;
+  color: var(--sidebar-text-strong);
+  background: var(--sidebar-bg-elevated);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.16), 0 1px 0 rgba(255, 255, 255, 0.04) inset;
   font: inherit;
   text-align: left;
   cursor: pointer;
-  transition: background 140ms ease, color 140ms ease;
+  transition: background 140ms ease, border-color 140ms ease, box-shadow 140ms ease, transform 140ms ease;
+}
+
+.app-shell[data-theme='light'] .canvasflow-user-button {
+  color: #111827;
+  background: #ffffff;
+  border-color: #D8DEE8;
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08), 0 0 0 1px rgba(255, 255, 255, 0.88) inset;
 }
 
 .canvasflow-user-button:hover {
-  color: var(--sidebar-text-strong);
   background: var(--sidebar-hover);
+  border-color: var(--brand-blue);
+  transform: translateY(-1px);
+}
+
+.app-shell[data-theme='light'] .canvasflow-user-button:hover {
+  background: #ffffff;
+  box-shadow: 0 10px 26px rgba(15, 23, 42, 0.12);
 }
 
 .canvasflow-user-button:focus-visible {
@@ -409,19 +427,23 @@
 
 .canvasflow-user-avatar {
   display: grid;
-  width: 36px;
-  height: 36px;
+  width: 32px;
+  height: 32px;
   place-items: center;
   flex: 0 0 auto;
   border-radius: 999px;
   color: #ffffff;
-  background: linear-gradient(135deg, var(--brand-blue), var(--brand-cyan));
-  box-shadow: 0 8px 18px rgba(75, 128, 255, 0.22);
+  background: linear-gradient(135deg, #6D5CFF, #A855F7);
+  box-shadow: 0 8px 18px rgba(124, 92, 255, 0.28);
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1;
 }
 
 .canvasflow-user-avatar svg {
-  width: 19px;
-  height: 19px;
+  width: 18px;
+  height: 18px;
 }
 
 .canvasflow-user-copy {
@@ -430,23 +452,121 @@
   min-width: 0;
 }
 
-.canvasflow-user-name,
-.canvasflow-user-status {
+.canvasflow-user-name {
   overflow: hidden;
+  color: currentColor;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.canvasflow-user-name {
-  color: var(--sidebar-text-strong);
-  font-size: 14px;
-  font-weight: 700;
+.canvasflow-user-chevron {
+  display: grid;
+  width: 18px;
+  height: 18px;
+  place-items: center;
+  margin-left: auto;
+  color: var(--sidebar-text-muted);
 }
 
-.canvasflow-user-status {
+.canvasflow-user-chevron svg {
+  width: 16px;
+  height: 16px;
+}
+
+.canvasflow-user-menu {
+  position: absolute;
+  right: 14px;
+  bottom: 76px;
+  left: 14px;
+  z-index: 10;
+  overflow: hidden;
+  border: 1px solid rgba(148, 163, 184, 0.24);
+  border-radius: 14px;
+  color: var(--sidebar-text-strong);
+  background: var(--sidebar-bg-elevated);
+  box-shadow: 0 22px 48px rgba(0, 0, 0, 0.28);
+}
+
+.app-shell[data-theme='light'] .canvasflow-user-menu {
+  color: #111827;
+  background: #ffffff;
+  border-color: #E5EAF1;
+  box-shadow: 0 20px 42px rgba(15, 23, 42, 0.16);
+}
+
+.canvasflow-user-menu__identity {
+  display: grid;
+  gap: 3px;
+  padding: 16px 16px 12px;
+}
+
+.canvasflow-user-menu__identity strong {
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.15;
+}
+
+.canvasflow-user-menu__identity span {
   color: var(--sidebar-text-muted);
-  font-size: 12px;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.2;
+}
+
+.canvasflow-user-menu__divider {
+  height: 1px;
+  margin: 0 8px;
+  background: var(--sidebar-divider);
+}
+
+.app-shell[data-theme='light'] .canvasflow-user-menu__divider {
+  background: #E8EDF4;
+}
+
+.canvasflow-user-menu__item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  height: 48px;
+  padding: 0 16px;
+  border: 0;
+  color: #D3D8E5;
+  background: transparent;
+  font: inherit;
+  font-size: 15px;
   font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+  transition: background 140ms ease, color 140ms ease;
+}
+
+.app-shell[data-theme='light'] .canvasflow-user-menu__item {
+  color: #334155;
+}
+
+.canvasflow-user-menu__item:hover {
+  color: var(--sidebar-text-strong);
+  background: var(--sidebar-hover);
+}
+
+.canvasflow-user-menu__item svg {
+  width: 19px;
+  height: 19px;
+  flex: 0 0 auto;
+  color: currentColor;
+}
+
+.canvasflow-user-menu__item--danger {
+  color: #FF4D4F;
+}
+
+.canvasflow-user-menu__item--danger:hover {
+  color: #FF4D4F;
+  background: rgba(255, 77, 79, 0.1);
 }
 
 .blank-workspace {
@@ -614,11 +734,16 @@
 }
 
 .canvasflow-sidebar--collapsed .canvasflow-user-copy,
+.canvasflow-sidebar--collapsed .canvasflow-user-chevron,
 .canvasflow-sidebar--collapsed .canvasflow-theme-button__label {
   display: none;
 }
 
 .canvasflow-sidebar--collapsed.canvasflow-sidebar--previewed .canvasflow-user-copy {
+  display: grid;
+}
+
+.canvasflow-sidebar--collapsed.canvasflow-sidebar--previewed .canvasflow-user-chevron {
   display: grid;
 }
 
