@@ -191,13 +191,13 @@ export function App() {
                 <span>{mockUser.email}</span>
               </div>
               <div className="canvasflow-user-menu__divider" />
-              <button className="canvasflow-user-menu__item" type="button" role="menuitem"><UserIcon />Profile</button>
-              <button className="canvasflow-user-menu__item" type="button" role="menuitem"><SettingsIcon />Settings</button>
-              <button className="canvasflow-user-menu__item" type="button" role="menuitem"><BillingIcon />Billing</button>
+              <button className="canvasflow-user-menu__item" type="button" role="menuitem"><UserIcon />个人资料</button>
+              <button className="canvasflow-user-menu__item" type="button" role="menuitem"><SettingsIcon />设置</button>
+              <button className="canvasflow-user-menu__item" type="button" role="menuitem"><BillingIcon />账单</button>
               <div className="canvasflow-user-menu__divider" />
-              <button className="canvasflow-user-menu__item" type="button" role="menuitem"><HelpIcon />Help & Support</button>
+              <button className="canvasflow-user-menu__item" type="button" role="menuitem"><HelpIcon />帮助与支持</button>
               <div className="canvasflow-user-menu__divider" />
-              <button className="canvasflow-user-menu__item canvasflow-user-menu__item--danger" type="button" role="menuitem"><LogoutIcon />Log out</button>
+              <button className="canvasflow-user-menu__item canvasflow-user-menu__item--danger" type="button" role="menuitem"><LogoutIcon />退出登录</button>
             </div>
           )}
 
