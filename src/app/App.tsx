@@ -6,6 +6,7 @@ import {
   AddSquareIcon,
   BookIcon,
   ChevronDownIcon,
+  ChevronRightIcon,
   CollapseIcon,
   FolderIcon,
   MoonIcon,
@@ -40,7 +41,9 @@ export function App() {
   const [isSidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [isSidebarPreviewed, setSidebarPreviewed] = useState(false);
   const [activeNavId, setActiveNavId] = useState<ActiveNavId>('projects');
+  const [isAssetMenuExpanded, setAssetMenuExpanded] = useState(true);
   const ThemeIcon = theme === 'dark' ? SunIcon : MoonIcon;
+  const AssetChevronIcon = isAssetMenuExpanded ? ChevronDownIcon : ChevronRightIcon;
   const isSidebarVisuallyCollapsed = isSidebarCollapsed && !isSidebarPreviewed;
 
   return (
@@ -101,16 +104,21 @@ export function App() {
           <section className="canvasflow-nav__group" aria-label="资产管理">
             <button
               aria-current={activeNavId === 'assets' ? 'page' : undefined}
+              aria-expanded={isAssetMenuExpanded}
               aria-label={isSidebarVisuallyCollapsed ? '资产管理' : undefined}
               className={`canvasflow-nav__item ${activeNavId === 'assets' ? 'canvasflow-nav__item--active' : ''}`}
-              onClick={() => setActiveNavId('assets')}
+              onClick={() => {
+                setActiveNavId('assets');
+                setAssetMenuExpanded((current) => !current);
+              }}
               type="button"
             >
               <span className="canvasflow-nav__icon" aria-hidden="true"><FolderIcon /></span>
               <span className="canvasflow-nav__label">资产管理</span>
-              <span className="canvasflow-nav__chevron" aria-hidden="true"><ChevronDownIcon /></span>
+              <span className="canvasflow-nav__chevron" aria-hidden="true"><AssetChevronIcon /></span>
             </button>
 
+            {isAssetMenuExpanded && (
             <div className="canvasflow-subnav">
               {assetItems.map(({ Icon, ...item }) => (
                 <button
@@ -127,6 +135,7 @@ export function App() {
                 </button>
               ))}
             </div>
+            )}
           </section>
         </nav>
 

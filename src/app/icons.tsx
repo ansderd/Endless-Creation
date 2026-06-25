@@ -110,6 +110,14 @@ export function ChevronDownIcon(props: IconProps) {
   );
 }
 
+export function ChevronRightIcon(props: IconProps) {
+  return (
+    <SvgIcon {...props}>
+      <path d="m10 7 5 5-5 5" />
+    </SvgIcon>
+  );
+}
+
 export function SunIcon(props: IconProps) {
   return (
     <SvgIcon {...props}>
