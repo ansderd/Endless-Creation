@@ -269,8 +269,8 @@
   height: 18px;
 }
 
-.canvasflow-nav__group {
-  margin-top: 2px;
+.canvasflow-nav__entry {
+  min-width: 0;
 }
 
 .canvasflow-subnav {

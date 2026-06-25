@@ -102,6 +102,47 @@ export function BookIcon(props: IconProps) {
   );
 }
 
+
+export function PenBookIcon(props: IconProps) {
+  return (
+    <SvgIcon {...props}>
+      <path d="M5 5.5A2.5 2.5 0 0 1 7.5 3H19v15H7.5A2.5 2.5 0 0 0 5 20.5V5.5Z" />
+      <path d="M8.5 8h5M8.5 11h4" />
+      <path d="m14.5 16.5 4.2-4.2a1.4 1.4 0 0 1 2 2l-4.2 4.2-2.4.6.4-2.6Z" />
+    </SvgIcon>
+  );
+}
+
+export function ImageWorkbenchIcon(props: IconProps) {
+  return (
+    <SvgIcon {...props}>
+      <rect x="4" y="5" width="16" height="14" rx="3" />
+      <circle cx="9" cy="10" r="1.5" />
+      <path d="m6.5 17 4-4 3 3 2-2 3 3" />
+      <path d="M17.5 7.5h2M18.5 6.5v2" />
+    </SvgIcon>
+  );
+}
+
+export function VideoIcon(props: IconProps) {
+  return (
+    <SvgIcon {...props}>
+      <rect x="4" y="6" width="11" height="12" rx="3" />
+      <path d="m15 10 5-3v10l-5-3" />
+      <path d="M8 10h3" />
+    </SvgIcon>
+  );
+}
+
+export function SettingsIcon(props: IconProps) {
+  return (
+    <SvgIcon {...props}>
+      <path d="M12 3.5v2M12 18.5v2M5.99 5.99l1.42 1.42M16.59 16.59l1.42 1.42M3.5 12h2M18.5 12h2M5.99 18.01l1.42-1.42M16.59 7.41l1.42-1.42" />
+      <circle cx="12" cy="12" r="3.2" />
+    </SvgIcon>
+  );
+}
+
 export function ChevronDownIcon(props: IconProps) {
   return (
     <SvgIcon {...props}>
