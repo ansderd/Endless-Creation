@@ -16,7 +16,9 @@
   display: grid;
   grid-template-columns: 248px minmax(0, 1fr);
   transition: grid-template-columns 180ms ease;
+  height: 100vh;
   min-height: 100vh;
+  overflow: hidden;
   color: var(--ink);
   background: var(--bg);
 }
@@ -572,8 +574,9 @@
 
 .blank-workspace {
   min-width: 0;
-  min-height: 100vh;
-  overflow: hidden;
+  min-height: 0;
+  height: 100%;
+  overflow: auto;
   background: var(--bg);
 }
 
@@ -780,4 +783,12 @@
   width: auto;
   height: auto;
   padding: 8px;
+}
+
+
+.app-shell > .image-workbench,
+.app-shell > .blank-workspace {
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
 }

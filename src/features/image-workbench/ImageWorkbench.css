@@ -23,7 +23,8 @@
 
   box-sizing: border-box;
   min-width: 0;
-  min-height: 100vh;
+  height: 100%;
+  min-height: 0;
   padding: 24px;
   overflow: auto;
   color: var(--image-text);
@@ -63,7 +64,7 @@
 .image-workbench__frame {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr) auto;
-  min-height: calc(100vh - 48px);
+  min-height: calc(100% - 0px);
   overflow: hidden;
   border: 1px solid var(--image-line);
   border-radius: 20px;
