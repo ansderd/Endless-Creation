@@ -12,6 +12,7 @@ import {
   CollapseIcon,
   FolderIcon,
   HelpIcon,
+  HomeIcon,
   ImageWorkbenchIcon,
   LogoutIcon,
   MoonIcon,
@@ -29,6 +30,7 @@ import './App.css';
 
 type SidebarIcon = ComponentType<SVGProps<SVGSVGElement>>;
 type ActiveNavId =
+  | 'home'
   | 'projects'
   | 'novel'
   | 'script-workbench'
@@ -44,6 +46,7 @@ type ActiveNavId =
 type PrimaryNavId = Exclude<ActiveNavId, 'asset-role' | 'asset-scene' | 'asset-script' | 'asset-novel'>;
 
 const sidebarNavItems: Array<{ id: PrimaryNavId; Icon: SidebarIcon; label: string }> = [
+  { id: 'home', Icon: HomeIcon, label: '首页' },
   { id: 'projects', Icon: ProjectIcon, label: '项目管理' },
   { id: 'novel', Icon: PenBookIcon, label: '小说创作' },
   { id: 'script-workbench', Icon: ScriptIcon, label: '剧本工作台' },
@@ -66,7 +69,7 @@ export function App() {
   const [theme, setTheme] = usePersistentTheme();
   const [isSidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [isSidebarPreviewed, setSidebarPreviewed] = useState(false);
-  const [activeNavId, setActiveNavId] = useState<ActiveNavId>('projects');
+  const [activeNavId, setActiveNavId] = useState<ActiveNavId>('home');
   const [isAssetMenuExpanded, setAssetMenuExpanded] = useState(true);
   const [isUserMenuOpen, setUserMenuOpen] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
