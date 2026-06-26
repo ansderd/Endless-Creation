@@ -1,46 +1,47 @@
+import type { ReactNode } from 'react';
 import './ProjectManagement.css';
 
 const canvases = [
-  { id: 'canvas-2', title: '???? 2', nodes: 23, edges: 32, updatedAt: '06/24 18:06' },
-  { id: 'canvas-1', title: '???? 1', nodes: 19, edges: 25, updatedAt: '06/26 13:02' },
+  { id: 'canvas-2', title: '无限画布 2', nodes: 23, edges: 32, updatedAt: '06/24 18:06' },
+  { id: 'canvas-1', title: '无限画布 1', nodes: 19, edges: 25, updatedAt: '06/26 13:02' },
 ];
 
 export function ProjectManagement() {
   return (
-    <main className="project-management" aria-label="????">
+    <main className="project-management" aria-label="项目管理">
       <section className="project-management__header">
         <div className="project-management__title-group">
-          <p>???</p>
-          <h1>????</h1>
+          <p>画布库</p>
+          <h1>无限画布</h1>
         </div>
-        <div className="project-management__actions" aria-label="????">
-          <button className="project-management__button" type="button">????</button>
-          <button className="project-management__button" type="button"><ImportIcon />????</button>
-          <button className="project-management__button project-management__button--primary" type="button"><PlusIcon />????</button>
+        <div className="project-management__actions" aria-label="画布操作">
+          <button className="project-management__button" type="button">删除全部</button>
+          <button className="project-management__button" type="button"><ImportIcon />导入画布</button>
+          <button className="project-management__button project-management__button--primary" type="button"><PlusIcon />新建画布</button>
         </div>
       </section>
 
       <div className="project-management__divider" />
 
-      <section className="project-management__grid" aria-label="????">
+      <section className="project-management__grid" aria-label="画布列表">
         {canvases.map((canvas) => (
           <article className="canvas-card" key={canvas.id}>
             <div className="canvas-card__topline">
               <label className="canvas-card__checkbox">
-                <input aria-label={`??${canvas.title}`} type="checkbox" />
+                <input aria-label={`选择${canvas.title}`} type="checkbox" />
                 <span aria-hidden="true" />
               </label>
               <div>
                 <h2>{canvas.title}</h2>
-                <p>{canvas.nodes} ??? ? {canvas.edges} ???</p>
+                <p>{canvas.nodes} 个节点 ? {canvas.edges} 条连线</p>
               </div>
             </div>
             <footer className="canvas-card__footer">
-              <span>??? {canvas.updatedAt}</span>
-              <div className="canvas-card__icons" aria-label={`${canvas.title} ??`}>
-                <button aria-label="??" type="button"><DownloadIcon /></button>
-                <button aria-label="??" type="button"><EditIcon /></button>
-                <button aria-label="??" type="button"><TrashIcon /></button>
+              <span>更新于 {canvas.updatedAt}</span>
+              <div className="canvas-card__icons" aria-label={`${canvas.title} 操作`}>
+                <button aria-label="下载" type="button"><DownloadIcon /></button>
+                <button aria-label="编辑" type="button"><EditIcon /></button>
+                <button aria-label="删除" type="button"><TrashIcon /></button>
               </div>
             </footer>
           </article>
@@ -50,7 +51,7 @@ export function ProjectManagement() {
   );
 }
 
-function IconFrame({ children }: { children: React.ReactNode }) {
+function IconFrame({ children }: { children: ReactNode }) {
   return <svg aria-hidden="true" fill="none" focusable="false" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24">{children}</svg>;
 }
 
