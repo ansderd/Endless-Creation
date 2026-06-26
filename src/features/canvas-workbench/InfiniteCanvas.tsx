@@ -1,0 +1,103 @@
+import { useEffect, useRef, type PointerEvent as ReactPointerEvent, type ReactNode, type WheelEvent as ReactWheelEvent } from 'react';
+import { clampScale, zoomAtPoint } from './canvasMath';
+import type { ViewportTransform } from './types';
+
+interface InfiniteCanvasProps {
+  viewport: ViewportTransform;
+  onViewportChange: (viewport: ViewportTransform) => void;
+  onCanvasClick: () => void;
+  children: ReactNode;
+}
+
+export function InfiniteCanvas({ viewport, onViewportChange, onCanvasClick, children }: InfiniteCanvasProps) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const panRef = useRef({ active: false, pointerId: 0, startX: 0, startY: 0, initialX: 0, initialY: 0, moved: false });
+  const viewportRef = useRef(viewport);
+
+  useEffect(() => {
+    viewportRef.current = viewport;
+  }, [viewport]);
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+    const preventDocumentScroll = (event: WheelEvent) => event.preventDefault();
+    container.addEventListener('wheel', preventDocumentScroll, { passive: false });
+    return () => container.removeEventListener('wheel', preventDocumentScroll);
+  }, []);
+
+  function handleWheel(event: ReactWheelEvent<HTMLDivElement>) {
+    const target = event.target instanceof Element ? event.target : null;
+    if (target?.closest('[data-canvas-control]')) return;
+    const rect = containerRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    const factor = Math.pow(1.1, -event.deltaY / 100);
+    const point = { x: event.clientX - rect.left, y: event.clientY - rect.top };
+    onViewportChange(zoomAtPoint(viewportRef.current, point, viewportRef.current.k * factor));
+  }
+
+  function handlePointerDown(event: ReactPointerEvent<HTMLDivElement>) {
+    const target = event.target instanceof Element ? event.target : null;
+    if (event.button !== 0 || target?.closest('[data-canvas-node],[data-canvas-control]')) return;
+    event.preventDefault();
+    event.currentTarget.setPointerCapture(event.pointerId);
+    panRef.current = {
+      active: true,
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startY: event.clientY,
+      initialX: viewportRef.current.x,
+      initialY: viewportRef.current.y,
+      moved: false,
+    };
+  }
+
+  function handlePointerMove(event: ReactPointerEvent<HTMLDivElement>) {
+    const pan = panRef.current;
+    if (!pan.active || pan.pointerId !== event.pointerId) return;
+    const dx = event.clientX - pan.startX;
+    const dy = event.clientY - pan.startY;
+    if (Math.abs(dx) > 3 || Math.abs(dy) > 3) pan.moved = true;
+    onViewportChange({ x: pan.initialX + dx, y: pan.initialY + dy, k: viewportRef.current.k });
+  }
+
+  function handlePointerUp(event: ReactPointerEvent<HTMLDivElement>) {
+    const pan = panRef.current;
+    if (!pan.active || pan.pointerId !== event.pointerId) return;
+    panRef.current.active = false;
+    if (!pan.moved) onCanvasClick();
+  }
+
+  return (
+    <div
+      className="infinite-canvas"
+      ref={containerRef}
+      onPointerDown={handlePointerDown}
+      onPointerMove={handlePointerMove}
+      onPointerUp={handlePointerUp}
+      onPointerCancel={handlePointerUp}
+      onWheel={handleWheel}
+    >
+      <CanvasGrid viewport={viewport} />
+      <div
+        className="infinite-canvas__world"
+        style={{ transform: `translate(${viewport.x}px, ${viewport.y}px) scale(${clampScale(viewport.k)})` }}
+      >
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function CanvasGrid({ viewport }: { viewport: ViewportTransform }) {
+  const gridSize = Math.max(12, 48 * viewport.k);
+  return (
+    <div
+      className="infinite-canvas__grid"
+      style={{
+        backgroundSize: `${gridSize}px ${gridSize}px`,
+        backgroundPosition: `${viewport.x % gridSize}px ${viewport.y % gridSize}px`,
+      }}
+    />
+  );
+}

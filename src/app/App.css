@@ -787,6 +787,7 @@
 
 
 .app-shell > .image-workbench,
+.app-shell > .canvas-workbench,
 .app-shell > .blank-workspace {
   min-width: 0;
   min-height: 0;

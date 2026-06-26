@@ -16,6 +16,10 @@ interface ProjectCardItem {
   tone: ProjectTone;
 }
 
+interface ProjectManagementProps {
+  onOpenCanvas?: (canvasId: string) => void;
+}
+
 const filters = ['全部', '最近编辑', '本地项目', '画布项目', '草稿', '已归档'] as const;
 
 const projects: ProjectCardItem[] = [
@@ -65,12 +69,16 @@ const projects: ProjectCardItem[] = [
   },
 ];
 
-export function ProjectManagement() {
+export function ProjectManagement({ onOpenCanvas }: ProjectManagementProps) {
   const [activeFilter, setActiveFilter] = useState<(typeof filters)[number]>('全部');
   const [feedback, setFeedback] = useState('');
 
   function mockAction(label: string) {
     setFeedback(`${label} 是 mock 操作，暂未接入本地文件系统。`);
+  }
+
+  function openCanvas(canvasId: string) {
+    onOpenCanvas?.(canvasId);
   }
 
   return (
@@ -90,9 +98,9 @@ export function ProjectManagement() {
             <FolderOpenIcon />
             打开本地项目
           </button>
-          <button className="project-management__button project-management__button--primary" onClick={() => mockAction('新建项目')} type="button">
+          <button className="project-management__button project-management__button--primary" onClick={() => openCanvas('new-canvas')} type="button">
             <PlusIcon />
-            新建项目
+            新建画布
           </button>
         </div>
       </section>
@@ -138,7 +146,7 @@ export function ProjectManagement() {
             <footer className="project-card__footer">
               <span>最近编辑：{project.updatedAt}</span>
               <div className="project-card__actions">
-                <button onClick={() => mockAction('打开画布')} type="button">打开画布</button>
+                <button onClick={() => openCanvas(project.id)} type="button">打开画布</button>
                 <button aria-label={`${project.name} 更多操作`} onClick={() => mockAction('更多')} type="button">更多</button>
               </div>
             </footer>
