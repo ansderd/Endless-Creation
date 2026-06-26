@@ -4,6 +4,7 @@ import type { ThemeMode } from '../types/workspace';
 import { rendererBridge } from '../services/rendererBridge';
 import { ImageWorkbench } from '../features/image-workbench';
 import { ProjectManagement } from '../features/project-management';
+import { CanvasWorkbench } from '../features/canvas-workbench';
 import {
   AddSquareIcon,
   BillingIcon,
@@ -71,6 +72,7 @@ export function App() {
   const [isSidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [isSidebarPreviewed, setSidebarPreviewed] = useState(false);
   const [activeNavId, setActiveNavId] = useState<ActiveNavId>('home');
+  const [activeCanvasId, setActiveCanvasId] = useState<string | null>(null);
   const [isAssetMenuExpanded, setAssetMenuExpanded] = useState(true);
   const [isUserMenuOpen, setUserMenuOpen] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
@@ -149,6 +151,7 @@ export function App() {
                   className={`canvasflow-nav__item ${isActive ? 'canvasflow-nav__item--active' : ''}`}
                   onClick={() => {
                     setActiveNavId(item.id);
+                    if (item.id !== 'projects') setActiveCanvasId(null);
                     if (isAssetParent) {
                       setAssetMenuExpanded((current) => !current);
                     }
@@ -172,6 +175,7 @@ export function App() {
                         key={assetItem.id}
                         onClick={() => {
                           setActiveNavId(assetItem.id);
+                          setActiveCanvasId(null);
                           setAssetMenuExpanded(true);
                         }}
                         type="button"
@@ -238,8 +242,10 @@ export function App() {
 
       {activeNavId === 'image-workbench' ? (
         <ImageWorkbench />
+      ) : activeNavId === 'projects' && activeCanvasId ? (
+        <CanvasWorkbench canvasId={activeCanvasId} onBack={() => setActiveCanvasId(null)} />
       ) : activeNavId === 'projects' ? (
-        <ProjectManagement />
+        <ProjectManagement onOpenCanvas={setActiveCanvasId} />
       ) : (
         <main className="blank-workspace" aria-label="空白工作区" />
       )}
