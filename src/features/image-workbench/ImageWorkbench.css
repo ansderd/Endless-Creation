@@ -996,7 +996,7 @@
 }
 
 .image-studio__field--quality {
-  grid-column: span 9;
+  grid-column: span 8;
 }
 
 .image-studio__quality-group {
@@ -1139,14 +1139,16 @@
 
 .image-studio__stepper {
   display: grid;
-  grid-template-columns: 32px minmax(42px, 1fr) 32px;
+  grid-template-columns: 38px minmax(36px, 1fr) 38px;
   align-items: center;
-  gap: 6px;
+  justify-items: center;
+  gap: 10px;
   min-width: 0;
 }
 
 .image-studio__stepper button {
   display: grid;
+  width: 38px;
   height: 30px;
   place-items: center;
   border: 1px solid var(--image-line-soft);
