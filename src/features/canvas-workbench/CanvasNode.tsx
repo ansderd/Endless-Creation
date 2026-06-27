@@ -84,9 +84,9 @@ function NodePreview({ node }: { node: CanvasNodeData }) {
 }
 
 function nodeTypeLabel(type: CanvasNodeData['type']) {
-  if (type === 'image') return '文本';
-  if (type === 'config') return '文本';
-  if (type === 'video') return '文本';
-  if (type === 'audio') return '文本';
+  if (type === 'image') return '图片';
+  if (type === 'config') return '配置';
+  if (type === 'video') return '视频';
+  if (type === 'audio') return '音频';
   return '文本';
 }
