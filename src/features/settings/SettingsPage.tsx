@@ -14,6 +14,7 @@ type SettingsSectionId = 'appearance' | 'workspace' | 'local' | 'api' | 'about';
 type ApiConfigTabId = 'channels' | 'models' | 'preferences' | 'webdav';
 type StartupPage = 'home' | 'projects' | 'last';
 type ApiCallFormat = 'openai' | 'gemini';
+type ModelCapability = 'image' | 'video' | 'text' | 'audio';
 
 interface ModelChannel {
   id: string;
@@ -38,7 +39,20 @@ interface ModelPreferences {
   imageModel: string;
   videoModel: string;
   audioModel: string;
+  imageModels: string[];
+  videoModels: string[];
+  textModels: string[];
+  audioModels: string[];
   availableModels: string[];
+  modelOptionsInitialized: boolean;
+}
+
+interface ModelOption {
+  value: string;
+  model: string;
+  label: string;
+  channelName: string;
+  capability: ModelCapability;
 }
 
 interface GenerationPreferences {
@@ -120,7 +134,12 @@ const defaultModelPreferences: ModelPreferences = {
   imageModel: 'gpt-image-1',
   videoModel: 'sora',
   audioModel: 'gpt-4o-mini-tts',
+  imageModels: [],
+  videoModels: [],
+  textModels: [],
+  audioModels: [],
   availableModels: [],
+  modelOptionsInitialized: false,
 };
 
 const defaultGenerationPreferences: GenerationPreferences = {
@@ -174,15 +193,11 @@ export function SettingsPage({ theme, onThemeChange, onClose }: SettingsPageProp
 
   const activeSectionMeta = settingsSections.find((section) => section.id === activeSection) ?? settingsSections[0];
   const editingChannel = editingChannelDraft;
-  const allChannelModels = useMemo(() => uniqueModels(apiStore.channels.flatMap((channel) => channel.models)), [apiStore.channels]);
-  const modelOptions = useMemo(() => uniqueModels([
-    ...allChannelModels,
-    ...modelPreferences.availableModels,
-    modelPreferences.imageModel,
-    modelPreferences.videoModel,
-    modelPreferences.textModel,
-    modelPreferences.audioModel,
-  ]), [allChannelModels, modelPreferences]);
+  const allModelOptions = useMemo(() => modelOptionsFromChannels(apiStore.channels), [apiStore.channels]);
+  const imageModelValues = useMemo(() => selectedModelValues('image', modelPreferences.imageModels, allModelOptions, modelPreferences.availableModels, modelPreferences.modelOptionsInitialized), [allModelOptions, modelPreferences.availableModels, modelPreferences.imageModels, modelPreferences.modelOptionsInitialized]);
+  const videoModelValues = useMemo(() => selectedModelValues('video', modelPreferences.videoModels, allModelOptions, modelPreferences.availableModels, modelPreferences.modelOptionsInitialized), [allModelOptions, modelPreferences.availableModels, modelPreferences.modelOptionsInitialized, modelPreferences.videoModels]);
+  const textModelValues = useMemo(() => selectedModelValues('text', modelPreferences.textModels, allModelOptions, modelPreferences.availableModels, modelPreferences.modelOptionsInitialized), [allModelOptions, modelPreferences.availableModels, modelPreferences.modelOptionsInitialized, modelPreferences.textModels]);
+  const audioModelValues = useMemo(() => selectedModelValues('audio', modelPreferences.audioModels, allModelOptions, modelPreferences.availableModels, modelPreferences.modelOptionsInitialized), [allModelOptions, modelPreferences.audioModels, modelPreferences.availableModels, modelPreferences.modelOptionsInitialized]);
   const isTesting = apiStore.channels.some((channel) => channel.lastTestStatus === 'testing');
 
   useEffect(() => {
@@ -303,15 +318,17 @@ export function SettingsPage({ theme, onThemeChange, onClose }: SettingsPageProp
   }
 
   function syncModelPreferencesWithChannels(channels: ModelChannel[]) {
+    const options = modelOptionsFromChannels(channels);
     const availableModels = uniqueModels([
       ...channels.flatMap((channel) => channel.models),
+      ...options.map((option) => option.value),
       ...modelPreferences.availableModels,
       modelPreferences.imageModel,
       modelPreferences.videoModel,
       modelPreferences.textModel,
       modelPreferences.audioModel,
     ]);
-    const nextPreferences = { ...modelPreferences, availableModels };
+    const nextPreferences = normalizeModelPreferencesForOptions({ ...modelPreferences, availableModels }, options);
     setModelPreferences(nextPreferences);
     writeStorage(MODEL_PREFERENCES_STORAGE_KEY, nextPreferences);
     return nextPreferences;
@@ -375,20 +392,28 @@ export function SettingsPage({ theme, onThemeChange, onClose }: SettingsPageProp
     if (result.models?.length) {
       setCandidateModels((current) => uniqueModels([...current, ...result.models!]));
     }
-    const mergedModels = uniqueModels([...modelPreferences.availableModels, ...testedDraft.models]);
-    setEditingChannelDraft(testedDraft);
-    setTestResult(result);
-    const nextPreferences = { ...modelPreferences, availableModels: mergedModels };
-    setModelPreferences(nextPreferences);
-    persistApiStore({
+    const testedStore = {
       ...nextStore,
       channels: nextStore.channels.map((channel) => channel.id === testedDraft.id ? testedDraft : channel),
-    }, true);
+    };
+    const testedOptions = modelOptionsFromChannels(testedStore.channels);
+    const mergedModels = uniqueModels([
+      ...modelPreferences.availableModels,
+      ...testedDraft.models,
+      ...testedOptions.map((option) => option.value),
+    ]);
+    setEditingChannelDraft(testedDraft);
+    setTestResult(result);
+    const nextPreferences = normalizeModelPreferencesForOptions({ ...modelPreferences, availableModels: mergedModels }, testedOptions);
+    setModelPreferences(nextPreferences);
+    persistApiStore(testedStore, true);
     writeStorage(MODEL_PREFERENCES_STORAGE_KEY, nextPreferences);
   }
 
   function saveModelPreferences() {
-    writeStorage(MODEL_PREFERENCES_STORAGE_KEY, modelPreferences);
+    const nextPreferences = normalizeModelPreferencesForOptions(modelPreferences, allModelOptions);
+    setModelPreferences(nextPreferences);
+    writeStorage(MODEL_PREFERENCES_STORAGE_KEY, nextPreferences);
     setFeedback('模型偏好已保存。');
   }
 
@@ -452,13 +477,16 @@ export function SettingsPage({ theme, onThemeChange, onClose }: SettingsPageProp
         }
       : item);
     const nextStore = { ...apiStore, channels: nextChannels, activeChannelId: channelId };
-    const mergedModels = uniqueModels([...modelPreferences.availableModels, ...nextModels]);
+    const testedStore = { ...apiStore, channels: nextChannels, activeChannelId: channelId };
+    const testedOptions = modelOptionsFromChannels(testedStore.channels);
+    const mergedModels = uniqueModels([...modelPreferences.availableModels, ...nextModels, ...testedOptions.map((option) => option.value)]);
+    const nextPreferences = normalizeModelPreferencesForOptions({ ...modelPreferences, availableModels: mergedModels }, testedOptions);
 
-    setApiStore(nextStore);
-    setModelPreferences((current) => ({ ...current, availableModels: mergedModels }));
+    setApiStore(testedStore);
+    setModelPreferences(nextPreferences);
     setTestResult(result);
-    writeStorage(API_PROVIDER_STORAGE_KEY, nextStore);
-    writeStorage(MODEL_PREFERENCES_STORAGE_KEY, { ...modelPreferences, availableModels: mergedModels });
+    writeStorage(API_PROVIDER_STORAGE_KEY, testedStore);
+    writeStorage(MODEL_PREFERENCES_STORAGE_KEY, nextPreferences);
   }
 
   async function testAllChannels() {
@@ -691,15 +719,25 @@ export function SettingsPage({ theme, onThemeChange, onClose }: SettingsPageProp
                       <button className="settings-page__primary" type="button" onClick={saveModelPreferences}>保存模型偏好</button>
                     </div>
                     <article className="settings-card">
-                      <div className="settings-model-grid">
-                        <ModelField label="默认生图模型" value={modelPreferences.imageModel} options={modelOptions} onChange={(imageModel) => setModelPreferences((current) => ({ ...current, imageModel }))} />
-                        <ModelField label="默认视频模型" value={modelPreferences.videoModel} options={modelOptions} onChange={(videoModel) => setModelPreferences((current) => ({ ...current, videoModel }))} />
-                        <ModelField label="默认文本模型" value={modelPreferences.textModel} options={modelOptions} onChange={(textModel) => setModelPreferences((current) => ({ ...current, textModel }))} />
-                        <ModelField label="默认音频模型" value={modelPreferences.audioModel} options={modelOptions} onChange={(audioModel) => setModelPreferences((current) => ({ ...current, audioModel }))} />
+                      <div className="settings-model-card-intro">
+                        <h3>默认模型和可选项</h3>
+                        <p>可选项决定各处下拉框展示哪些模型；同名模型会以括号里的渠道名区分。</p>
+                      </div>
+                      <div className="settings-model-option-grid">
+                        <ModelOptionGroup title="生图模型可选项" values={imageModelValues} options={allModelOptions.filter((option) => option.capability === 'image')} onChange={(imageModels) => setModelPreferences((current) => ({ ...current, imageModels, modelOptionsInitialized: true }))} />
+                        <ModelOptionGroup title="视频模型可选项" values={videoModelValues} options={allModelOptions.filter((option) => option.capability === 'video')} onChange={(videoModels) => setModelPreferences((current) => ({ ...current, videoModels, modelOptionsInitialized: true }))} />
+                        <ModelOptionGroup title="文本模型可选项" values={textModelValues} options={allModelOptions.filter((option) => option.capability === 'text')} onChange={(textModels) => setModelPreferences((current) => ({ ...current, textModels, modelOptionsInitialized: true }))} />
+                        <ModelOptionGroup title="音频模型可选项" values={audioModelValues} options={allModelOptions.filter((option) => option.capability === 'audio')} onChange={(audioModels) => setModelPreferences((current) => ({ ...current, audioModels, modelOptionsInitialized: true }))} />
+                      </div>
+                      <div className="settings-model-default-grid">
+                        <ModelField label="默认生图模型" value={normalizeSingleModelValue(modelPreferences.imageModel, allModelOptions)} options={optionsByValues(imageModelValues, allModelOptions)} onChange={(imageModel) => setModelPreferences((current) => ({ ...current, imageModel }))} />
+                        <ModelField label="默认视频模型" value={normalizeSingleModelValue(modelPreferences.videoModel, allModelOptions)} options={optionsByValues(videoModelValues, allModelOptions)} onChange={(videoModel) => setModelPreferences((current) => ({ ...current, videoModel }))} />
+                        <ModelField label="默认文本模型" value={normalizeSingleModelValue(modelPreferences.textModel, allModelOptions)} options={optionsByValues(textModelValues, allModelOptions)} onChange={(textModel) => setModelPreferences((current) => ({ ...current, textModel }))} />
+                        <ModelField label="默认音频模型" value={normalizeSingleModelValue(modelPreferences.audioModel, allModelOptions)} options={optionsByValues(audioModelValues, allModelOptions)} onChange={(audioModel) => setModelPreferences((current) => ({ ...current, audioModel }))} />
                       </div>
                       <div className="settings-api-status">
                         <strong>可选模型列表</strong>
-                        <span>{modelOptions.length ? modelOptions.join('、') : '暂无拉取结果，可直接手动输入模型名称。'}</span>
+                        <span>{allModelOptions.length ? allModelOptions.map((option) => option.label).join('、') : '暂无拉取结果，请先在渠道中获取模型，或手动输入模型名称。'}</span>
                       </div>
                     </article>
                   </section>
@@ -932,13 +970,12 @@ function ToggleSwitch({ checked, onChange, label }: { checked: boolean; onChange
 interface ModelFieldProps {
   label: string;
   value: string;
-  options: string[];
+  options: ModelOption[];
   onChange: (value: string) => void;
 }
 
 function ModelField({ label, value, options, onChange }: ModelFieldProps) {
-  const normalizedOptions = uniqueModels(options);
-  const hasCustomValue = value.trim() && !normalizedOptions.includes(value);
+  const hasCustomValue = value.trim() && !options.some((option) => option.value === value);
   return (
     <label className="settings-field">
       <span>{label}</span>
@@ -946,11 +983,56 @@ function ModelField({ label, value, options, onChange }: ModelFieldProps) {
         if (event.target.value !== '__custom__') onChange(event.target.value);
       }}>
         <option value="">请选择模型</option>
-        {normalizedOptions.map((option) => <option value={option} key={option}>{option}</option>)}
+        {options.map((option) => <option value={option.value} key={option.value}>{option.label}</option>)}
         {hasCustomValue ? <option value="__custom__">自定义：{value}</option> : null}
       </select>
       <input value={value} onChange={(event) => onChange(event.target.value)} placeholder="自定义模型名称" />
     </label>
+  );
+}
+
+interface ModelOptionGroupProps {
+  title: string;
+  values: string[];
+  options: ModelOption[];
+  onChange: (values: string[]) => void;
+}
+
+function ModelOptionGroup({ title, values, options, onChange }: ModelOptionGroupProps) {
+  const selected = values.filter((value) => options.some((option) => option.value === value));
+  const selectedOptions = optionsByValues(selected, options);
+
+  function toggleOption(value: string, checked: boolean) {
+    onChange(checked ? uniqueModels([...selected, value]) : selected.filter((item) => item !== value));
+  }
+
+  return (
+    <section className="settings-model-option-group">
+      <div className="settings-model-option-group__header">
+        <strong>{title}</strong>
+        <span>{selected.length}/{options.length}</span>
+      </div>
+      <div className="settings-model-selected-tags">
+        {selectedOptions.length ? selectedOptions.map((option) => (
+          <button type="button" key={option.value} title={option.label} onClick={() => toggleOption(option.value, false)}>
+            <span>{option.label}</span>
+            <em aria-hidden="true">×</em>
+          </button>
+        )) : <p>请选择或输入模型可选项</p>}
+      </div>
+      <div className="settings-model-option-actions">
+        <button type="button" disabled={!options.length} onClick={() => onChange(options.map((option) => option.value))}>全选</button>
+        <button type="button" disabled={!selected.length} onClick={() => onChange([])}>清空</button>
+      </div>
+      <div className="settings-model-option-list">
+        {options.length ? options.map((option) => (
+          <label key={option.value}>
+            <input type="checkbox" checked={selected.includes(option.value)} onChange={(event) => toggleOption(option.value, event.target.checked)} />
+            <span title={option.label}>{option.label}</span>
+          </label>
+        )) : <p>暂无模型，请先在渠道中获取模型。</p>}
+      </div>
+    </section>
   );
 }
 
@@ -1102,4 +1184,79 @@ function writeStorage<T>(key: string, value: T) {
 
 function uniqueModels(models: string[]) {
   return Array.from(new Set(models.map((model) => model.trim()).filter(Boolean)));
+}
+
+function encodeChannelModel(channelId: string, model: string) {
+  return `${channelId}::${model.trim()}`;
+}
+
+function decodeChannelModel(value: string) {
+  const index = value.indexOf('::');
+  if (index < 0) return null;
+  return { channelId: value.slice(0, index), model: value.slice(index + 2) };
+}
+
+function modelOptionName(value: string) {
+  return decodeChannelModel(value)?.model || value;
+}
+
+function modelOptionsFromChannels(channels: ModelChannel[]): ModelOption[] {
+  return channels.flatMap((channel) => uniqueModels(channel.models).map((model) => ({
+    value: encodeChannelModel(channel.id, model),
+    model,
+    label: `${model}（${channel.name || '未命名渠道'}）`,
+    channelName: channel.name || '未命名渠道',
+    capability: modelCapability(model),
+  })));
+}
+
+function selectedModelValues(capability: ModelCapability, values: string[], options: ModelOption[], legacyModels: string[], initialized: boolean) {
+  const normalized = normalizeModelValues(values, options);
+  if (normalized.length || initialized) return normalized;
+
+  const legacyMatched = normalizeModelValues(legacyModels.filter((model) => modelCapability(modelOptionName(model)) === capability), options);
+  if (legacyMatched.length) return legacyMatched;
+
+  return options.filter((option) => option.capability === capability).map((option) => option.value);
+}
+
+function optionsByValues(values: string[], options: ModelOption[]) {
+  const valueSet = new Set(values);
+  return options.filter((option) => valueSet.has(option.value));
+}
+
+function normalizeModelValues(values: string[], options: ModelOption[]) {
+  return uniqueModels(values).map((value) => normalizeSingleModelValue(value, options)).filter(Boolean);
+}
+
+function normalizeSingleModelValue(value: string, options: ModelOption[]) {
+  const model = value.trim();
+  if (!model) return '';
+  if (options.some((option) => option.value === model)) return model;
+  const matched = options.find((option) => option.model === model);
+  return matched?.value || model;
+}
+
+function normalizeModelPreferencesForOptions(preferences: ModelPreferences, options: ModelOption[]): ModelPreferences {
+  return {
+    ...preferences,
+    imageModel: normalizeSingleModelValue(preferences.imageModel, options),
+    videoModel: normalizeSingleModelValue(preferences.videoModel, options),
+    textModel: normalizeSingleModelValue(preferences.textModel, options),
+    audioModel: normalizeSingleModelValue(preferences.audioModel, options),
+    imageModels: selectedModelValues('image', preferences.imageModels, options, preferences.availableModels, preferences.modelOptionsInitialized),
+    videoModels: selectedModelValues('video', preferences.videoModels, options, preferences.availableModels, preferences.modelOptionsInitialized),
+    textModels: selectedModelValues('text', preferences.textModels, options, preferences.availableModels, preferences.modelOptionsInitialized),
+    audioModels: selectedModelValues('audio', preferences.audioModels, options, preferences.availableModels, preferences.modelOptionsInitialized),
+    availableModels: uniqueModels([...preferences.availableModels, ...options.map((option) => option.value)]),
+    modelOptionsInitialized: true,
+  };
+}
+
+function modelCapability(model: string): ModelCapability {
+  const value = model.toLowerCase();
+  if (value.includes('audio') || value.includes('tts') || value.includes('speech') || value.includes('voice') || value.includes('music') || value.includes('sound')) return 'audio';
+  if (value.includes('video') || value.includes('sora') || value.includes('veo') || value.includes('kling') || value.includes('wan') || value.includes('seedance')) return 'video';
+  if (value.includes('image') || value.includes('img') || value.includes('dall-e') || value.includes('dalle') || value.includes('imagen') || value.includes('flux') || value.includes('seedream')) return 'image';
+  return 'text';
 }
