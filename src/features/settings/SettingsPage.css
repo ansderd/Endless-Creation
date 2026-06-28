@@ -1037,6 +1037,196 @@
   gap: 14px;
 }
 
+.settings-model-card-intro {
+  display: grid;
+  gap: 8px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--surface-2) 78%, transparent);
+}
+
+.settings-model-card-intro h3 {
+  margin: 0;
+  color: var(--ink);
+  font-size: 16px;
+}
+
+.settings-model-card-intro p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.settings-model-option-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.settings-model-option-group {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+
+.settings-model-option-group__header,
+.settings-model-option-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.settings-model-option-group__header strong {
+  color: var(--ink);
+  font-size: 14px;
+}
+
+.settings-model-option-group__header span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.settings-model-selected-tags {
+  display: flex;
+  flex-wrap: wrap;
+  align-content: flex-start;
+  gap: 6px;
+  min-height: 42px;
+  padding: 6px;
+  border: 1px solid var(--border-strong);
+  border-radius: 12px;
+  background: var(--surface-2);
+}
+
+.settings-model-selected-tags button {
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+  max-width: 210px;
+  gap: 7px;
+  height: 28px;
+  padding: 0 9px;
+  border: 0;
+  border-radius: 8px;
+  color: var(--ink);
+  background: color-mix(in srgb, var(--surface) 84%, transparent);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.settings-model-selected-tags button span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.settings-model-selected-tags button em {
+  color: var(--muted);
+  font-style: normal;
+}
+
+.settings-model-selected-tags p,
+.settings-model-option-list p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.settings-model-option-actions {
+  justify-content: flex-end;
+}
+
+.settings-model-option-actions button {
+  height: 28px;
+  padding: 0 10px;
+  border: 1px solid var(--border-strong);
+  border-radius: 9px;
+  color: var(--ink);
+  background: var(--surface-2);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 850;
+  cursor: pointer;
+}
+
+.settings-model-option-actions button:hover:not(:disabled) {
+  border-color: rgba(91, 140, 255, 0.38);
+  background: rgba(91, 140, 255, 0.12);
+}
+
+.settings-model-option-actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.52;
+}
+
+.settings-model-option-list {
+  display: grid;
+  gap: 6px;
+  max-height: 160px;
+  overflow: auto;
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface-2);
+  scrollbar-width: thin;
+  scrollbar-color: rgba(148, 163, 184, 0.32) transparent;
+}
+
+.settings-model-option-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.settings-model-option-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.settings-model-option-list::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.28);
+}
+
+.settings-model-option-list label {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  min-height: 32px;
+  padding: 5px 7px;
+  border-radius: 10px;
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 750;
+}
+
+.settings-model-option-list label:hover {
+  background: color-mix(in srgb, var(--surface) 72%, transparent);
+}
+
+.settings-model-option-list input {
+  width: 16px;
+  height: 16px;
+  accent-color: #4b83ff;
+}
+
+.settings-model-option-list label span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.settings-model-default-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+}
+
 .settings-field--section {
   margin-top: 16px;
 }
@@ -1082,6 +1272,8 @@
   }
 
   .settings-model-grid,
+  .settings-model-option-grid,
+  .settings-model-default-grid,
   .settings-preference-grid {
     grid-template-columns: 1fr;
   }
