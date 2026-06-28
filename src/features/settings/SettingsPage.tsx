@@ -215,7 +215,7 @@ export function SettingsPage({ theme, onThemeChange, onClose }: SettingsPageProp
   useEffect(() => {
     if (!openModelPreferenceDropdown) return;
 
-    function closeOnOutsideClick(event: MouseEvent) {
+    function closeOnOutsidePointerDown(event: PointerEvent) {
       const target = event.target as Element | null;
       const dropdownRoot = target?.closest('[data-model-dropdown-root]') as HTMLElement | null;
       if (dropdownRoot?.dataset.modelDropdownId !== openModelPreferenceDropdown) {
@@ -223,8 +223,8 @@ export function SettingsPage({ theme, onThemeChange, onClose }: SettingsPageProp
       }
     }
 
-    document.addEventListener('mousedown', closeOnOutsideClick);
-    return () => document.removeEventListener('mousedown', closeOnOutsideClick);
+    document.addEventListener('pointerdown', closeOnOutsidePointerDown, true);
+    return () => document.removeEventListener('pointerdown', closeOnOutsidePointerDown, true);
   }, [openModelPreferenceDropdown]);
 
   useEffect(() => {
