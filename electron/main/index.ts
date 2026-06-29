@@ -1,4 +1,5 @@
 import { app, BrowserWindow, clipboard, ipcMain } from 'electron';
+import { promises as fs } from 'node:fs';
 import path from 'node:path';
 
 const DEV_SERVER_URL = process.env.VITE_DEV_SERVER_URL;
@@ -36,6 +37,9 @@ interface ApiGeneratedImage {
   b64Json?: string;
   url?: string;
   revisedPrompt?: string;
+  localPath?: string;
+  fileName?: string;
+  mimeType?: string;
 }
 
 interface ApiImageGenerationResult {
@@ -299,11 +303,13 @@ async function generateOpenAiCompatibleImage(request: unknown): Promise<ApiImage
       };
     }
 
+    const images = await saveGeneratedImagesLocally(parsed.images);
+
     return {
       ok: true,
       status: response.status,
-      message: `生图成功，返回 ${parsed.images.length} 张图片。`,
-      images: parsed.images,
+      message: `生图成功，返回 ${images.length} 张图片。`,
+      images,
     };
   } catch (error) {
     if (error instanceof Error && error.name === 'AbortError') {
@@ -396,6 +402,36 @@ async function readImageGenerationResponse(
     .filter((image): image is ApiGeneratedImage => image !== null);
 
   return { images, errorMessage };
+}
+
+async function saveGeneratedImagesLocally(images: ApiGeneratedImage[]): Promise<ApiGeneratedImage[]> {
+  const saveDir = path.join(app.getPath('userData'), 'generated', 'images');
+
+  return Promise.all(images.map(async (image, index) => {
+    if (!image.b64Json) return image;
+
+    try {
+      await fs.mkdir(saveDir, { recursive: true });
+      const fileName = `${formatTimestamp(new Date())}-${index + 1}-${Math.random().toString(36).slice(2, 8)}.png`;
+      const localPath = path.join(saveDir, fileName);
+      await fs.writeFile(localPath, Buffer.from(image.b64Json, 'base64'));
+
+      return {
+        ...image,
+        localPath,
+        fileName,
+        mimeType: 'image/png',
+      };
+    } catch (error) {
+      console.warn('Failed to save generated image locally:', error);
+      return image;
+    }
+  }));
+}
+
+function formatTimestamp(date: Date): string {
+  const pad = (value: number) => String(value).padStart(2, '0');
+  return `${date.getFullYear()}${pad(date.getMonth() + 1)}${pad(date.getDate())}-${pad(date.getHours())}${pad(date.getMinutes())}${pad(date.getSeconds())}`;
 }
 
 function readProviderErrorMessage(body: unknown, apiKey: string): string | undefined {
