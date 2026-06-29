@@ -512,7 +512,6 @@ export function SettingsPage({ theme, onThemeChange, onClose }: SettingsPageProp
     setModelPreferences(nextPreferences);
     setTestResult(result);
     writeStorage(API_PROVIDER_STORAGE_KEY, testedStore);
-    notifyModelPreferencesUpdated();
     writeStorage(MODEL_PREFERENCES_STORAGE_KEY, nextPreferences);
     notifyModelPreferencesUpdated();
   }
@@ -1117,6 +1116,7 @@ function ModelOptionGroup({ dropdownId, title, values, options, isOpen, onOpenCh
   const [dropUp, setDropUp] = useState(false);
   const [listMaxHeight, setListMaxHeight] = useState(220);
   const [searchTerm, setSearchTerm] = useState('');
+  const [collapsedChannelIds, setCollapsedChannelIds] = useState<string[]>([]);
   const selected = values.filter((value) => options.some((option) => option.value === value));
   const selectedOptions = optionsByValues(selected, options);
   const visibleSelectedOptions = selectedOptions.slice(0, 2);
@@ -1160,6 +1160,12 @@ function ModelOptionGroup({ dropdownId, title, values, options, isOpen, onOpenCh
     onChange(selected.filter((value) => !channelValues.includes(value)));
   }
 
+  function toggleChannelCollapsed(channelId: string) {
+    setCollapsedChannelIds((current) => current.includes(channelId)
+      ? current.filter((id) => id !== channelId)
+      : [...current, channelId]);
+  }
+
   return (
     <section className="settings-model-option-group" ref={rootRef} data-model-dropdown-root data-model-dropdown-id={dropdownId}>
       <div className="settings-model-option-group__header">
@@ -1198,22 +1204,34 @@ function ModelOptionGroup({ dropdownId, title, values, options, isOpen, onOpenCh
           {options.length && groupedOptions.length ? groupedOptions.map((group) => {
             const selectedCount = group.options.filter((option) => selected.includes(option.value)).length;
             const allSelected = selectedCount === group.options.length;
+            const isCollapsed = collapsedChannelIds.includes(group.channelId);
             return (
-              <section className="settings-model-channel-group" key={group.channelId}>
+              <section className={isCollapsed ? 'settings-model-channel-group settings-model-channel-group--collapsed' : 'settings-model-channel-group'} key={group.channelId}>
                 <div className="settings-model-channel-group__header">
-                  <strong title={group.channelName}>{group.channelName}</strong>
+                  <button
+                    className="settings-model-channel-group__toggle"
+                    type="button"
+                    aria-expanded={!isCollapsed}
+                    onClick={() => toggleChannelCollapsed(group.channelId)}
+                    title={isCollapsed ? '展开模型' : '收起模型'}
+                  >
+                    <span aria-hidden="true">{isCollapsed ? '▸' : '⌄'}</span>
+                    <strong title={group.channelName}>{group.channelName}</strong>
+                  </button>
                   <span>{selectedCount}/{group.options.length}</span>
                   <button type="button" onClick={() => updateChannelOptions(group.options, !allSelected)}>{allSelected ? '清空' : '全选'}</button>
                   {selectedCount > 0 && !allSelected ? <button type="button" onClick={() => updateChannelOptions(group.options, false)}>清空</button> : null}
                 </div>
-                <div className="settings-model-channel-group__items">
-                  {group.options.map((option) => (
-                    <label key={option.value}>
-                      <input type="checkbox" checked={selected.includes(option.value)} onChange={(event) => toggleOption(option.value, event.target.checked)} />
-                      <span title={option.model}>{option.model}</span>
-                    </label>
-                  ))}
-                </div>
+                {!isCollapsed ? (
+                  <div className="settings-model-channel-group__items">
+                    {group.options.map((option) => (
+                      <label key={option.value}>
+                        <input type="checkbox" checked={selected.includes(option.value)} onChange={(event) => toggleOption(option.value, event.target.checked)} />
+                        <span title={option.model}>{option.model}</span>
+                      </label>
+                    ))}
+                  </div>
+                ) : null}
               </section>
             );
           }) : <p>{options.length ? '没有匹配的模型' : '暂无模型，请先在渠道中获取模型。'}</p>}
