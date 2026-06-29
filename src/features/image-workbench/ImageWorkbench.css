@@ -1109,10 +1109,10 @@
   gap: 6px;
   min-height: 72px;
   padding: 8px 6px;
-  border: 1px solid rgba(148, 163, 184, 0.2);
+  border: 1px solid rgba(148, 163, 184, 0.28);
   border-radius: 11px;
   color: var(--image-muted);
-  background: rgba(255, 255, 255, 0.035);
+  background: rgba(148, 163, 184, 0.08);
   font: inherit;
   font-size: 12px;
   font-weight: 820;
@@ -1126,16 +1126,18 @@
   white-space: nowrap;
 }
 
+.image-studio__size-ratio-wrap {
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 34px;
+}
+
 .image-studio__size-ratio {
   display: block;
-  width: min(42px, 70%);
-  max-width: 46px;
-  max-height: 30px;
-  min-width: 12px;
-  min-height: 12px;
-  border: 2px solid rgba(159, 181, 255, 0.78);
+  border: 2px solid rgba(100, 116, 139, 0.72);
   border-radius: 5px;
-  background: rgba(91, 134, 255, 0.12);
+  background: rgba(255, 255, 255, 0.08);
 }
 
 .image-studio__size-ratio--auto {
@@ -1146,9 +1148,15 @@
 
 .image-studio__size-preset:hover,
 .image-studio__size-preset--active {
-  color: #ffffff;
-  border-color: rgba(91, 134, 255, 0.72);
-  background: rgba(91, 134, 255, 0.22);
+  color: #6fa0ff;
+  border-color: rgba(91, 134, 255, 0.92);
+  background: rgba(91, 134, 255, 0.18);
+}
+
+.image-studio__size-preset:hover .image-studio__size-ratio,
+.image-studio__size-preset--active .image-studio__size-ratio {
+  border-color: #5b86ff;
+  background: rgba(91, 134, 255, 0.18);
 }
 
 .image-studio__field--select > span {

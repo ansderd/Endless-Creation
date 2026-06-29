@@ -263,8 +263,8 @@ function SizeField({ onChange, value }: { onChange: (value: string) => void; val
           <div className="image-studio__size-presets" aria-label="宽高比预设">
             {sizePresets.map((preset) => {
               const presetValue = preset.value ?? `${preset.width}×${preset.height}`;
-              const ratioStyle = preset.width && preset.height ? { aspectRatio: `${preset.width} / ${preset.height}` } : undefined;
-              return <button className={presetValue === value ? 'image-studio__size-preset image-studio__size-preset--active' : 'image-studio__size-preset'} key={preset.label} type="button" onClick={() => selectPreset(preset)}>{ratioStyle ? <span className="image-studio__size-ratio" style={ratioStyle} aria-hidden="true" /> : <span className="image-studio__size-ratio image-studio__size-ratio--auto" aria-hidden="true" />}<span>{preset.label}</span></button>;
+              const ratioStyle = getRatioPreviewStyle(preset);
+              return <button className={presetValue === value ? 'image-studio__size-preset image-studio__size-preset--active' : 'image-studio__size-preset'} key={preset.label} type="button" onClick={() => selectPreset(preset)}><span className="image-studio__size-ratio-wrap" aria-hidden="true">{ratioStyle ? <span className="image-studio__size-ratio" style={ratioStyle} /> : <span className="image-studio__size-ratio image-studio__size-ratio--auto" />}</span><span>{preset.label}</span></button>;
             })}
           </div>
         </div>
@@ -339,6 +339,17 @@ function getAspectRatioLabel(value: string) {
   if (!width || !height) return value;
   const divisor = greatestCommonDivisor(width, height);
   return `${width / divisor}:${height / divisor}`;
+}
+
+function getRatioPreviewStyle(preset: SizePreset) {
+  if (!preset.width || !preset.height) return null;
+  const maxWidth = 48;
+  const maxHeight = 32;
+  const scale = Math.min(maxWidth / preset.width, maxHeight / preset.height);
+  return {
+    width: Math.max(12, Math.round(preset.width * scale)),
+    height: Math.max(12, Math.round(preset.height * scale)),
+  };
 }
 
 function greatestCommonDivisor(left: number, right: number): number {
