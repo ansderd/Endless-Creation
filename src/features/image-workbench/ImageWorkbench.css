@@ -64,7 +64,7 @@
 .image-studio__upload-zone p { @apply mt-1 text-xs text-slate-400; }
 .image-studio__reference-list { @apply flex min-h-8 flex-wrap gap-2; }
 .image-studio__empty-inline { @apply text-sm font-semibold text-slate-400; }
-.image-studio__reference { @apply inline-flex max-w-full items-center gap-2 rounded-full bg-blue-50 py-1.5 pl-1.5 pr-3 text-xs font-bold text-blue-600; }
+.image-studio__reference { @apply inline-flex max-w-full cursor-pointer items-center gap-2 rounded-full bg-blue-50 py-1.5 pl-1.5 pr-3 text-xs font-bold text-blue-600 transition hover:bg-blue-100; }
 .image-studio__reference img { @apply h-8 w-8 rounded-full object-cover; }
 .image-studio__reference span { @apply max-w-40 truncate; }
 .image-studio__reference button { @apply rounded-full px-2 text-blue-400 hover:bg-blue-100; }
@@ -116,9 +116,11 @@
 .image-history__badge { @apply rounded-full bg-green-50 px-2.5 py-1 text-xs font-black text-green-600; }
 .image-history__badge--failed { @apply bg-red-50 text-red-600; }
 .image-history__badge--cancelled { @apply bg-amber-50 text-amber-600; }
-.image-preview-modal { @apply fixed inset-0 z-50 grid place-items-center bg-black/60 p-6; }
-.image-preview-modal>div { @apply grid w-[min(620px,90vw)] gap-4 rounded-3xl bg-white p-5 text-slate-900 shadow-2xl; }
-.image-preview-modal button { @apply justify-self-end rounded-xl bg-gray-100 px-3 py-2 text-sm font-bold text-slate-600; }
+.image-preview-modal,.image-reference-preview-modal { @apply fixed inset-0 z-50 grid place-items-center bg-slate-900/30 p-6 backdrop-blur-sm; }
+.image-preview-modal>div,.image-reference-preview-modal>div { @apply grid w-[min(760px,92vw)] gap-4 rounded-3xl bg-white p-5 text-slate-900 shadow-2xl; }
+.image-preview-modal button,.image-reference-preview-modal button { @apply justify-self-end rounded-xl bg-gray-100 px-3 py-2 text-sm font-bold text-slate-600 hover:bg-gray-200; }
+.image-reference-preview-modal img { @apply max-h-[72vh] w-full rounded-2xl object-contain; }
+.image-reference-preview-modal strong { @apply truncate text-center text-sm font-black text-slate-800; }
 .image-workbench__statusbar { @apply hidden; }
 
 @media (max-width:1180px) { .image-workbench__card--image-studio,.image-workbench__right-column { @apply col-span-12; } }
