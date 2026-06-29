@@ -50,6 +50,12 @@
 
 .image-studio__prompt-area { @apply relative grid gap-3 rounded-3xl bg-gray-50 p-5 pt-8; }
 .image-studio__prompt-area textarea { @apply min-h-[120px] w-full resize-none bg-transparent text-sm leading-6 text-slate-900 outline-none placeholder:text-slate-400; }
+.image-studio__prompt-input-wrap { @apply relative min-h-[120px]; }
+.image-studio__prompt-render { @apply pointer-events-none absolute inset-0 whitespace-pre-wrap break-words text-sm leading-6 text-slate-900; }
+.image-studio__prompt-render span { @apply text-sm leading-6 text-slate-900; }
+.image-studio__prompt-mention { @apply inline rounded-full bg-blue-100 px-2 py-0.5 text-sm font-black not-italic leading-6 text-blue-700; }
+.image-studio__prompt-input { @apply relative z-10; }
+.image-studio__prompt-input--masked { color: transparent; caret-color: #0f172a; }
 .image-studio__prompt-area--negative textarea { @apply min-h-16; }
 .image-studio__mention-menu { @apply absolute left-5 right-5 top-[calc(100%+8px)] z-40 grid max-h-52 gap-1 overflow-y-auto rounded-2xl border border-gray-100 bg-white p-2 shadow-xl; }
 .image-studio__mention-option { @apply grid min-h-10 grid-cols-[28px_auto_minmax(0,1fr)] items-center gap-2 rounded-xl px-2 py-1.5 text-left text-sm font-bold text-slate-600 hover:bg-blue-50 hover:text-blue-600; }
