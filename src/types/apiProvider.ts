@@ -18,6 +18,8 @@ export interface ApiConnectionTestResult {
 }
 
 export interface ApiImageGenerationRequest {
+  channelId?: string;
+  channelLabel?: string;
   baseUrl: string;
   apiKey: string;
   model: string;
@@ -41,4 +43,3 @@ export interface ApiImageGenerationResult {
   message: string;
   images?: ApiGeneratedImage[];
 }
-

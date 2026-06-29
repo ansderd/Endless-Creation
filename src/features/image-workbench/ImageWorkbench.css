@@ -454,6 +454,17 @@
   aspect-ratio: 1.48 / 1;
 }
 
+.image-workbench__generated-image {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1.48 / 1;
+  object-fit: cover;
+  overflow: hidden;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  border-radius: 12px;
+  background: var(--image-preview-bg);
+}
+
 .image-workbench__result-meta {
   display: flex;
   align-items: center;

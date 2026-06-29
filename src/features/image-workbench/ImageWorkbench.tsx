@@ -10,10 +10,11 @@ type Palette = 'blue' | 'cyan' | 'violet' | 'orange';
 interface ReferenceImage { id: string; name: string; source: 'mock' | 'result'; previewLabel: string; palette: Palette; }
 interface ImageGenerationConfig { modelId: string; size: string; quality: QualityOption; count: number; style: string; styleStrength: number; referenceWeight: number; saveToProject: boolean; }
 interface ImageGenerationRequest { id: string; prompt: string; negativePrompt: string; references: ReferenceImage[]; config: ImageGenerationConfig; createdAt: string; }
-interface GenerationResult { id: string; requestId: string; variantName: string; status: 'succeeded' | 'failed'; palette: Palette; }
+interface GenerationResult { id: string; requestId: string; variantName: string; status: 'succeeded' | 'failed'; palette: Palette; imageUrl?: string; revisedPrompt?: string; }
 interface GenerationHistoryItem { id: string; request: ImageGenerationRequest; status: GenerationStatus; results: GenerationResult[]; createdAt: string; durationMs?: number; errorMessage?: string; }
 interface ModelPreferences { imageModel?: string; imageModels?: string[]; }
-interface ApiProviderStore { channels?: Array<{ id: string; name?: string; models?: string[] }>; }
+interface ApiProviderChannel { id: string; name?: string; baseUrl?: string; apiKey?: string; apiFormat?: string; enabled?: boolean; models?: string[]; }
+interface ApiProviderStore { channels?: ApiProviderChannel[]; }
 interface ImageModelOption { value: string; modelName: string; channelName: string; label: string; }
 
 const MODEL_PREFERENCES_STORAGE_KEY = 'endless-creation.model-preferences';
@@ -44,12 +45,13 @@ export function ImageWorkbench() {
   const [isModelMenuOpen, setModelMenuOpen] = useState(false);
   const timerRef = useRef<number | null>(null);
   const modelMenuRef = useRef<HTMLDivElement | null>(null);
+  const generationRunRef = useRef(0);
   const trimmedPrompt = promptText.trim();
-  const canGenerate = trimmedPrompt.length > 0 && status !== 'generating';
-  const statusLabel = getStatusLabel(status);
-  const selectedResult = results.find((result) => result.id === selectedResultId) ?? null;
   const imageModelOptions = useMemo(() => resolveImageModelOptions(modelPreferences, apiProviderStore), [apiProviderStore, modelPreferences]);
   const selectedImageModel = imageModelOptions.find((option) => option.value === config.modelId) ?? null;
+  const canGenerate = trimmedPrompt.length > 0 && Boolean(selectedImageModel) && status !== 'generating';
+  const statusLabel = getStatusLabel(status);
+  const selectedResult = results.find((result) => result.id === selectedResultId) ?? null;
   const imageModelLabel = selectedImageModel?.label ?? '未配置图片模型';
   const parameterSummary = `${imageModelLabel} · ${config.size} · ${config.quality} · ${config.count} 张`;
 
@@ -70,22 +72,54 @@ export function ImageWorkbench() {
 
   const createRequestSnapshot = useCallback((): ImageGenerationRequest => ({ id: createId('request'), prompt: promptText.trim(), negativePrompt, references: references.map((item) => ({ ...item })), config: { ...config }, createdAt: new Date().toISOString() }), [config, negativePrompt, promptText, references]);
   const clearGenerationTimer = useCallback(() => { if (timerRef.current !== null) { window.clearTimeout(timerRef.current); timerRef.current = null; } }, []);
-  const runMockGeneration = useCallback((request: ImageGenerationRequest) => {
-    clearGenerationTimer();
+  const runImageGeneration = useCallback(async (request: ImageGenerationRequest) => {
+    const runId = generationRunRef.current + 1;
+    generationRunRef.current = runId;
     const startedAt = performance.now();
-    setCurrentRequest(request); setStatus('generating'); setErrorMessage(''); setFeedback('Mock AI 正在分析提示词、参考图和参数。');
-    timerRef.current = window.setTimeout(() => {
-      if (Math.random() < 0.1) {
-        const failedItem: GenerationHistoryItem = { id: createId('history'), request, status: 'failed', results: [], createdAt: new Date().toISOString(), durationMs: Math.round(performance.now() - startedAt), errorMessage: 'Mock AI 生成请求失败。请重试，或调整提示词与参数后再次生成。' };
-        setStatus('failed'); setErrorMessage('Mock AI 生成请求失败。请重试，或调整提示词与参数后再次生成。'); setFeedback(''); setHistory((current) => [failedItem, ...current].slice(0, 12)); timerRef.current = null; return;
+    const decodedModel = decodeChannelModel(request.config.modelId);
+    const channel = findChannelForModel(request.config.modelId, apiProviderStore);
+    const validationError = validateImageGenerationRequest(request, channel, decodedModel?.model);
+
+    if (validationError) {
+      const failedItem: GenerationHistoryItem = { id: createId('history'), request, status: 'failed', results: [], createdAt: new Date().toISOString(), durationMs: 0, errorMessage: validationError };
+      setStatus('failed'); setErrorMessage(validationError); setFeedback(''); setHistory((current) => [failedItem, ...current].slice(0, 12)); return;
+    }
+
+    setCurrentRequest(request); setStatus('generating'); setErrorMessage(''); setFeedback('正在调用真实生图 API…');
+
+    try {
+      const response = await rendererBridge.generateImage({
+        channelId: channel!.id,
+        channelLabel: channel!.name?.trim() || '未命名渠道',
+        baseUrl: channel!.baseUrl!,
+        apiKey: channel!.apiKey!,
+        model: decodedModel!.model,
+        prompt: request.prompt,
+        size: normalizeImageSize(request.config.size),
+        quality: normalizeImageQuality(request.config.quality),
+        count: request.config.count,
+      });
+
+      if (generationRunRef.current !== runId) return;
+
+      if (!response.ok || !response.images?.length) {
+        const message = response.message || '生图 API 未返回图片。';
+        const failedItem: GenerationHistoryItem = { id: createId('history'), request, status: 'failed', results: [], createdAt: new Date().toISOString(), durationMs: Math.round(performance.now() - startedAt), errorMessage: message };
+        setStatus('failed'); setErrorMessage(message); setFeedback(''); setHistory((current) => [failedItem, ...current].slice(0, 12)); return;
       }
-      const nextResults: GenerationResult[] = Array.from({ length: Math.min(Math.max(request.config.count, 1), 4) }, (_, index) => ({ id: createId('result'), requestId: request.id, variantName: `变体 ${index + 1}`, status: 'succeeded', palette: palettes[index % palettes.length] }));
+
+      const nextResults: GenerationResult[] = response.images.map((image, index) => ({ id: createId('result'), requestId: request.id, variantName: `变体 ${index + 1}`, status: 'succeeded', palette: palettes[index % palettes.length], imageUrl: image.b64Json ? `data:image/png;base64,${image.b64Json}` : image.url, revisedPrompt: image.revisedPrompt }));
       const historyItem: GenerationHistoryItem = { id: createId('history'), request, status: 'succeeded', results: nextResults, createdAt: new Date().toISOString(), durationMs: Math.round(performance.now() - startedAt) };
-      setResults(nextResults); setSelectedResultId(nextResults[0]?.id ?? null); setStatus('succeeded'); setFeedback('Mock 生成完成，已写入历史。'); setErrorMessage(''); setHistory((current) => [historyItem, ...current].slice(0, 12)); timerRef.current = null;
-    }, 960);
-  }, [clearGenerationTimer]);
-  const handleGenerate = useCallback(() => { if (!canGenerate) return; runMockGeneration(createRequestSnapshot()); }, [canGenerate, createRequestSnapshot, runMockGeneration]);
-  const handleCancel = useCallback(() => { if (status !== 'generating') return; clearGenerationTimer(); setStatus('cancelled'); setFeedback('已取消生成。'); setErrorMessage(''); }, [clearGenerationTimer, status]);
+      setResults(nextResults); setSelectedResultId(nextResults[0]?.id ?? null); setStatus('succeeded'); setFeedback('真实生图完成，已写入历史。'); setErrorMessage(''); setHistory((current) => [historyItem, ...current].slice(0, 12));
+    } catch (error) {
+      if (generationRunRef.current !== runId) return;
+      const message = error instanceof Error ? error.message : '生图请求失败，请稍后重试。';
+      const failedItem: GenerationHistoryItem = { id: createId('history'), request, status: 'failed', results: [], createdAt: new Date().toISOString(), durationMs: Math.round(performance.now() - startedAt), errorMessage: message };
+      setStatus('failed'); setErrorMessage(message); setFeedback(''); setHistory((current) => [failedItem, ...current].slice(0, 12));
+    }
+  }, [apiProviderStore]);
+  const handleGenerate = useCallback(() => { if (!canGenerate) { if (!trimmedPrompt) setErrorMessage('生成前需要填写提示词。'); else if (!selectedImageModel) setErrorMessage('请先在 API配置 / 模型偏好 中选择图片模型。'); else setErrorMessage('当前状态暂不能生成。'); return; } void runImageGeneration(createRequestSnapshot()); }, [canGenerate, createRequestSnapshot, runImageGeneration, selectedImageModel, trimmedPrompt]);
+  const handleCancel = useCallback(() => { if (status !== 'generating') return; generationRunRef.current += 1; clearGenerationTimer(); setStatus('cancelled'); setFeedback('已取消生成。'); setErrorMessage(''); }, [clearGenerationTimer, status]);
   useEffect(() => () => clearGenerationTimer(), [clearGenerationTimer]);
   useEffect(() => { function onKeyDown(event: KeyboardEvent) { if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') { event.preventDefault(); handleGenerate(); } if (event.key === 'Escape') { if (status === 'generating') handleCancel(); if (previewResult) setPreviewResult(null); } } window.addEventListener('keydown', onKeyDown); return () => window.removeEventListener('keydown', onKeyDown); }, [handleCancel, handleGenerate, previewResult, status]);
 
@@ -127,9 +161,9 @@ export function ImageWorkbench() {
 }
 
 function CompactNumber({ disabled = false, hint, label, max, min, onChange, suffix = '', value }: { disabled?: boolean; hint?: string; label: string; max: number; min: number; onChange: (value: number) => void; suffix?: string; value: number }) { return <div className={`image-studio__field ${disabled ? 'image-studio__field--disabled' : ''}`}><span>{label}</span><div className="image-studio__stepper"><button disabled={disabled || value <= min} onClick={() => onChange(Math.max(min, value - 1))} type="button">-</button><strong>{value}{suffix}</strong><button disabled={disabled || value >= max} onClick={() => onChange(Math.min(max, value + 1))} type="button">+</button></div>{hint && <small>{hint}</small>}</div>; }
-function ResultPanel({ currentRequest, onAddReference, onCopyConfig, onDeleteResult, onPreview, onSelect, results, selectedResultId, status }: { currentRequest: ImageGenerationRequest | null; onAddReference: (result: GenerationResult) => void; onCopyConfig: (result: GenerationResult) => void; onDeleteResult: (id: string) => void; onPreview: (result: GenerationResult) => void; onSelect: (id: string) => void; results: GenerationResult[]; selectedResultId: string | null; status: GenerationStatus }) { if (status === 'generating') return <div className="image-results__loading" aria-busy="true"><span /><strong>正在生成图片…</strong><p>Mock AI 正在排布画面与风格。</p></div>; if (results.length === 0) return <div className="image-results__empty"><strong>还没有生成图片</strong><p>输入提示词并点击生成后，结果会显示在这里。</p></div>; return <div className="image-results__grid">{results.map((result) => <div className="image-results__item" key={result.id}><button aria-pressed={selectedResultId === result.id} className={`image-workbench__result-card image-workbench__result-card--${result.palette} ${selectedResultId === result.id ? 'image-workbench__result-card--active' : ''}`} onClick={() => onSelect(result.id)} onKeyDown={(event) => { if (event.key === 'Enter') onSelect(result.id); }} type="button"><MockImage palette={result.palette} /><div className="image-workbench__result-meta"><span>{result.variantName}</span><span aria-hidden="true">...</span></div></button><div className="image-results__actions"><button onClick={() => onPreview(result)} type="button">预览</button><button onClick={() => onAddReference(result)} type="button">加入参考图</button><button disabled={!currentRequest} onClick={() => void onCopyConfig(result)} type="button">复制参数</button><button onClick={() => onDeleteResult(result.id)} type="button">删除</button></div></div>)}</div>; }
+function ResultPanel({ currentRequest, onAddReference, onCopyConfig, onDeleteResult, onPreview, onSelect, results, selectedResultId, status }: { currentRequest: ImageGenerationRequest | null; onAddReference: (result: GenerationResult) => void; onCopyConfig: (result: GenerationResult) => void; onDeleteResult: (id: string) => void; onPreview: (result: GenerationResult) => void; onSelect: (id: string) => void; results: GenerationResult[]; selectedResultId: string | null; status: GenerationStatus }) { if (status === 'generating') return <div className="image-results__loading" aria-busy="true"><span /><strong>正在生成图片…</strong><p>真实 API 正在生成图片，请稍候。</p></div>; if (results.length === 0) return <div className="image-results__empty"><strong>还没有生成图片</strong><p>输入提示词并点击生成后，结果会显示在这里。</p></div>; return <div className="image-results__grid">{results.map((result) => <div className="image-results__item" key={result.id}><button aria-pressed={selectedResultId === result.id} className={`image-workbench__result-card image-workbench__result-card--${result.palette} ${selectedResultId === result.id ? 'image-workbench__result-card--active' : ''}`} onClick={() => onSelect(result.id)} onKeyDown={(event) => { if (event.key === 'Enter') onSelect(result.id); }} type="button">{result.imageUrl ? <img className="image-workbench__generated-image" src={result.imageUrl} alt={result.variantName} /> : <MockImage palette={result.palette} />}<div className="image-workbench__result-meta"><span>{result.variantName}</span><span aria-hidden="true">...</span></div></button><div className="image-results__actions"><button onClick={() => onPreview(result)} type="button">预览</button><button onClick={() => onAddReference(result)} type="button">加入参考图</button><button disabled={!currentRequest} onClick={() => void onCopyConfig(result)} type="button">复制参数</button><button onClick={() => onDeleteResult(result.id)} type="button">删除</button></div></div>)}</div>; }
 function HistoryPanel({ history, onDelete, onRestore }: { history: GenerationHistoryItem[]; onDelete: (id: string) => void; onRestore: (item: GenerationHistoryItem) => void }) { return <section className="image-history" aria-label="生成历史"><div className="image-history__head"><h3>生成历史</h3><span>{history.length}</span></div>{history.length === 0 ? <div className="image-history__empty">暂无生成历史</div> : history.map((item) => <div className="image-history__item" key={item.id}><button onClick={() => onRestore(item)} type="button"><strong>{summarize(item.request.prompt)}</strong><span>{formatTime(item.createdAt)} · {item.request.config.modelId} · {item.request.config.size} · {item.request.config.count} 张</span></button><span className={`image-history__badge image-history__badge--${item.status}`}>{getStatusLabel(item.status)}</span><button aria-label="删除历史" onClick={() => onDelete(item.id)} type="button">删除</button></div>)}</section>; }
-function PreviewModal({ onClose, result }: { onClose: () => void; result: GenerationResult }) { return <div className="image-preview-modal" role="dialog" aria-modal="true" aria-label="预览结果"><div><button aria-label="关闭预览" onClick={onClose} type="button">关闭</button><MockImage palette={result.palette} /><strong>{result.variantName}</strong></div></div>; }
+function PreviewModal({ onClose, result }: { onClose: () => void; result: GenerationResult }) { return <div className="image-preview-modal" role="dialog" aria-modal="true" aria-label="预览结果"><div><button aria-label="关闭预览" onClick={onClose} type="button">关闭</button>{result.imageUrl ? <img className="image-workbench__generated-image" src={result.imageUrl} alt={result.variantName} /> : <MockImage palette={result.palette} />}<strong>{result.variantName}</strong></div></div>; }
 function MockImage({ palette }: { palette: Palette }) { const colorA = palette === 'cyan' ? '#20c7d2' : palette === 'violet' ? '#8b5cf6' : palette === 'orange' ? '#f59e0b' : '#5a7cff'; const colorB = palette === 'cyan' ? '#31d3e8' : palette === 'violet' ? '#a78bfa' : palette === 'orange' ? '#fb7185' : '#6fa0ff'; return <div className="image-workbench__mock-image" aria-hidden="true"><svg viewBox="0 0 220 150" role="img"><defs><linearGradient id={`image-gradient-${palette}`} x1="0" x2="1" y1="1" y2="0"><stop offset="0" stopColor={colorA} /><stop offset="1" stopColor={colorB} /></linearGradient></defs><rect width="220" height="150" rx="12" fill="#252d3f" /><circle cx="64" cy="47" r="20" fill="#f7a91b" /><path d="M24 130L90 64L144 116L194 40L206 130H24Z" fill={`url(#image-gradient-${palette})`} /></svg></div>; }
 function getStatusLabel(status: GenerationStatus) { return ({ idle: '未开始', editing: '编辑中', ready: '待生成', generating: '正在生成…', succeeded: '已完成', failed: '失败', cancelled: '已取消' } satisfies Record<GenerationStatus, string>)[status]; }
 function summarize(text: string) { return text.length > 34 ? `${text.slice(0, 34)}…` : text; }
@@ -160,6 +194,31 @@ function normalizeImageModelValue(value: string | undefined, options: ImageModel
   if (exactMatch) return exactMatch.value;
   const modelNameMatch = options.find((option) => option.modelName === value);
   return modelNameMatch?.value ?? '';
+}
+
+function findChannelForModel(value: string, apiProviderStore: ApiProviderStore) {
+  const decoded = decodeChannelModel(value);
+  if (!decoded) return null;
+  return (apiProviderStore.channels ?? []).find((channel) => channel.id === decoded.channelId) ?? null;
+}
+
+function validateImageGenerationRequest(request: ImageGenerationRequest, channel: ApiProviderChannel | null, model: string | undefined) {
+  if (!request.prompt.trim()) return '生成前需要填写提示词。';
+  if (!request.config.modelId || !model) return '请先在 API配置 / 模型偏好 中选择图片模型。';
+  if (!channel) return '找不到图片模型对应的 API 渠道，请返回 API配置 检查渠道。';
+  if (channel.enabled === false) return '当前 API 渠道已禁用，请在 API配置 中启用后重试。';
+  if (!channel.baseUrl?.trim()) return '当前 API 渠道缺少 Base URL。';
+  if (!channel.apiKey?.trim()) return '当前 API 渠道缺少 API Key。';
+  if (channel.apiFormat && channel.apiFormat !== 'openai') return '第一阶段仅支持 OpenAI-compatible 文生图。';
+  return '';
+}
+
+function normalizeImageSize(size: string) {
+  return size.replace('×', 'x');
+}
+
+function normalizeImageQuality(quality: QualityOption) {
+  return ({ 自动: 'auto', 高: 'high', 中: 'medium', 低: 'low' } satisfies Record<QualityOption, string>)[quality];
 }
 
 function decodeChannelModel(value: string) {

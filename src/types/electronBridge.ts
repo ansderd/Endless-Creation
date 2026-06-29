@@ -20,4 +20,3 @@ export interface EndlessCreationBridge {
   };
   ai?: DesktopAiClient;
 }
-
