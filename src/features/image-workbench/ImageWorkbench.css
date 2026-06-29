@@ -3,11 +3,8 @@
 .image-workbench { @apply h-full overflow-y-auto bg-[#F7F8FA] p-6 text-slate-900; }
 .image-workbench * { @apply box-border; }
 .image-workbench__frame { @apply mx-auto grid min-h-full max-w-[1600px] grid-rows-[auto_1fr] gap-6; }
-.image-workbench__topbar { @apply flex items-center justify-between gap-6; }
-.image-workbench__eyebrow { @apply m-0 text-sm font-semibold text-slate-400; }
-.image-workbench h1 { @apply m-0 text-3xl font-black tracking-tight text-slate-950; }
-.image-workbench__top-actions { @apply flex items-center gap-3; }
-.image-workbench__mode-pill { @apply rounded-full bg-white px-4 py-2 text-sm font-bold text-blue-600 shadow-sm; }
+.image-workbench__topbar { @apply flex items-center pb-1; }
+.image-workbench h1 { @apply m-0 text-[28px] font-semibold leading-tight tracking-[-0.03em] text-slate-950; }
 .image-workbench__columns--merged { @apply grid grid-cols-12 gap-6; }
 .image-workbench__card { @apply min-w-0 bg-white shadow-sm; }
 .image-workbench__card--image-studio { @apply col-span-7 flex flex-col gap-6 rounded-3xl p-6; }
