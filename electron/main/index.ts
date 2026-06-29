@@ -457,7 +457,7 @@ async function readModelIds(response: Response): Promise<string[]> {
   try {
     const body = await response.json() as { data?: Array<{ id?: unknown }> };
     return Array.isArray(body.data)
-      ? body.data.map((model) => model.id).filter((id): id is string => typeof id === 'string').slice(0, 8)
+      ? body.data.map((model) => model.id).filter((id): id is string => typeof id === 'string')
       : [];
   } catch {
     return [];
