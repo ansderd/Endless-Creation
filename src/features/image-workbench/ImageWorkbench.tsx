@@ -16,6 +16,7 @@ interface ModelPreferences { imageModel?: string; imageModels?: string[]; }
 interface ApiProviderChannel { id: string; name?: string; baseUrl?: string; apiKey?: string; apiFormat?: string; enabled?: boolean; models?: string[]; }
 interface ApiProviderStore { channels?: ApiProviderChannel[]; }
 interface ImageModelOption { value: string; modelName: string; channelName: string; label: string; }
+interface SizePreset { label: string; width?: number; height?: number; value?: string; }
 
 const MODEL_PREFERENCES_STORAGE_KEY = 'endless-creation.model-preferences';
 const API_PROVIDER_STORAGE_KEY = 'endless-creation.api-provider-config';
@@ -24,6 +25,21 @@ const quickActionsTop = ['提示词库', '方案库', '参数设置', '改稿实
 const quickActionsBottom = ['存方案包', '复制', '清空', 'Prompt Lab'] as const;
 const palettes: Palette[] = ['blue', 'cyan', 'violet', 'orange'];
 const baseConfig: ImageGenerationConfig = { modelId: '', size: '1536×1024', quality: '高', count: 4, style: '电影感', styleStrength: 72, referenceWeight: 60, saveToProject: true };
+const sizePresets: SizePreset[] = [
+  { label: '1:1', width: 1024, height: 1024 },
+  { label: '3:2', width: 1536, height: 1024 },
+  { label: '2:3', width: 1024, height: 1536 },
+  { label: '4:3', width: 1360, height: 1024 },
+  { label: '3:4', width: 1024, height: 1360 },
+  { label: '16:9', width: 1536, height: 864 },
+  { label: '9:16', width: 864, height: 1536 },
+  { label: '1:1(2k)', width: 2048, height: 2048 },
+  { label: '16:9(2k)', width: 2048, height: 1152 },
+  { label: '9:16(2k)', width: 1152, height: 2048 },
+  { label: '16:9(4k)', width: 4096, height: 2304 },
+  { label: '9:16(4k)', width: 2304, height: 4096 },
+  { label: 'auto', value: 'auto' },
+];
 let idSeed = 0;
 function createId(prefix: string) { idSeed += 1; return `${prefix}-${Date.now()}-${idSeed}`; }
 
@@ -180,7 +196,7 @@ export function ImageWorkbench() {
         <header className="image-workbench__topbar"><div className="image-workbench__title-group"><p className="image-workbench__eyebrow">智能生成</p><h1>生图工作台</h1><p>参数 + 提示词 + 结果</p></div><div className="image-workbench__top-actions"><button className="image-workbench__button" onClick={() => addMockReference()} type="button">导入参考图</button><button className="image-workbench__button image-workbench__button--primary" disabled={!canGenerate} onClick={handleGenerate} type="button">{generateLabel}</button></div></header>
         <div className="image-workbench__columns image-workbench__columns--merged">
           <section className="image-workbench__card image-workbench__card--composer image-workbench__card--image-studio">
-<div className="image-studio__params" aria-label="生图参数"><div className="image-studio__model-menu" ref={modelMenuRef}><button className="image-studio__field image-studio__field--select image-studio__model-trigger" type="button" disabled={imageModelOptions.length === 0} aria-haspopup="listbox" aria-expanded={isModelMenuOpen} onClick={() => { if (imageModelOptions.length) setModelMenuOpen((open) => !open); }}><span>图片模型</span><strong>{imageModelLabel}</strong><ChevronDownIcon /></button>{isModelMenuOpen && imageModelOptions.length ? <div className="image-studio__model-dropdown" role="listbox" aria-label="图片模型">{imageModelOptions.map((option) => { const selected = option.value === config.modelId; return <button className={selected ? 'image-studio__model-option image-studio__model-option--active' : 'image-studio__model-option'} type="button" role="option" aria-selected={selected} key={option.value} onClick={() => { updateConfig({ modelId: option.value }); setModelMenuOpen(false); }}><span aria-hidden="true" /><strong>{option.label}</strong></button>; })}</div> : null}</div><div className="image-studio__field"><span>尺寸</span><strong>{config.size}</strong></div><div className="image-studio__field image-studio__field--quality"><span>质量</span><div className="image-studio__quality-group" role="group" aria-label="质量">{qualityOptions.map((option) => <button aria-pressed={config.quality === option} className={config.quality === option ? 'image-studio__quality image-studio__quality--active' : 'image-studio__quality'} key={option} onClick={() => updateConfig({ quality: option })} type="button">{option}</button>)}</div></div><CompactNumber label="数量" value={config.count} min={1} max={4} onChange={(count) => updateConfig({ count })} /></div>
+<div className="image-studio__params" aria-label="生图参数"><div className="image-studio__model-menu" ref={modelMenuRef}><button className="image-studio__field image-studio__field--select image-studio__model-trigger" type="button" disabled={imageModelOptions.length === 0} aria-haspopup="listbox" aria-expanded={isModelMenuOpen} onClick={() => { if (imageModelOptions.length) setModelMenuOpen((open) => !open); }}><span>图片模型</span><strong>{imageModelLabel}</strong><ChevronDownIcon /></button>{isModelMenuOpen && imageModelOptions.length ? <div className="image-studio__model-dropdown" role="listbox" aria-label="图片模型">{imageModelOptions.map((option) => { const selected = option.value === config.modelId; return <button className={selected ? 'image-studio__model-option image-studio__model-option--active' : 'image-studio__model-option'} type="button" role="option" aria-selected={selected} key={option.value} onClick={() => { updateConfig({ modelId: option.value }); setModelMenuOpen(false); }}><span aria-hidden="true" /><strong>{option.label}</strong></button>; })}</div> : null}</div><SizeField value={config.size} onChange={(size) => updateConfig({ size })} /><div className="image-studio__field image-studio__field--quality"><span>质量</span><div className="image-studio__quality-group" role="group" aria-label="质量">{qualityOptions.map((option) => <button aria-pressed={config.quality === option} className={config.quality === option ? 'image-studio__quality image-studio__quality--active' : 'image-studio__quality'} key={option} onClick={() => updateConfig({ quality: option })} type="button">{option}</button>)}</div></div><CompactNumber label="数量" value={config.count} min={1} max={4} onChange={(count) => updateConfig({ count })} /></div>
             <div className="image-studio__status-strip"><label className="image-studio__save-option"><input checked={config.saveToProject} onChange={(event) => updateConfig({ saveToProject: event.target.checked })} type="checkbox" /><span aria-hidden="true" className="image-workbench__checkbox"><CheckIcon /></span><span>保存到本地项目</span></label><div className="image-studio__queue-inline"><span>队列</span><strong>{status === 'generating' ? '真实 API 生成中' : '暂无等待任务'}</strong></div></div>
             <label className="image-studio__prompt-area"><span>提示词</span><textarea aria-invalid={Boolean(promptError)} aria-label="提示词" maxLength={4000} onChange={(event) => updatePrompt(event.target.value)} placeholder="描述画面主体、风格、构图、光线和用途" value={promptText} /></label><div className="image-studio__count" aria-live="polite">{promptText.length}/4000</div>{promptError && <div className="image-studio__hint image-studio__hint--error" role="alert">{promptError}</div>}
             <label className="image-studio__prompt-area image-studio__prompt-area--negative"><span>反向提示词</span><textarea aria-label="反向提示词" maxLength={1000} onChange={(event) => setNegativePrompt(event.target.value)} placeholder="不希望出现的元素，例如低清晰度、畸形、过曝" value={negativePrompt} /></label>
@@ -199,6 +215,109 @@ export function ImageWorkbench() {
 }
 
 function CompactNumber({ disabled = false, hint, label, max, min, onChange, suffix = '', value }: { disabled?: boolean; hint?: string; label: string; max: number; min: number; onChange: (value: number) => void; suffix?: string; value: number }) { return <div className={`image-studio__field ${disabled ? 'image-studio__field--disabled' : ''}`}><span>{label}</span><div className="image-studio__stepper"><button disabled={disabled || value <= min} onClick={() => onChange(Math.max(min, value - 1))} type="button">-</button><strong>{value}{suffix}</strong><button disabled={disabled || value >= max} onClick={() => onChange(Math.min(max, value + 1))} type="button">+</button></div>{hint && <small>{hint}</small>}</div>; }
+function SizeField({ onChange, value }: { onChange: (value: string) => void; value: string }) {
+  const rootRef = useRef<HTMLDivElement | null>(null);
+  const [isOpen, setIsOpen] = useState(false);
+  const [alignToSixteen, setAlignToSixteen] = useState(true);
+  const parsedSize = parseSizeValue(value);
+  const [width, setWidth] = useState(parsedSize.width);
+  const [height, setHeight] = useState(parsedSize.height);
+
+  useEffect(() => {
+    const nextSize = parseSizeValue(value);
+    setWidth(nextSize.width);
+    setHeight(nextSize.height);
+  }, [value]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    function closeOnPointerDown(event: PointerEvent) {
+      if (!rootRef.current?.contains(event.target as Node)) setIsOpen(false);
+    }
+    function closeOnEscape(event: KeyboardEvent) {
+      if (event.key === 'Escape') setIsOpen(false);
+    }
+    document.addEventListener('pointerdown', closeOnPointerDown, true);
+    document.addEventListener('keydown', closeOnEscape);
+    return () => {
+      document.removeEventListener('pointerdown', closeOnPointerDown, true);
+      document.removeEventListener('keydown', closeOnEscape);
+    };
+  }, [isOpen]);
+
+  function commitSize(nextWidth: number, nextHeight: number, shouldAlign = alignToSixteen) {
+    const safeWidth = normalizeDimension(nextWidth, shouldAlign);
+    const safeHeight = normalizeDimension(nextHeight, shouldAlign);
+    setWidth(safeWidth);
+    setHeight(safeHeight);
+    onChange(`${safeWidth}×${safeHeight}`);
+  }
+
+  function updateWidth(nextValue: string) {
+    const nextWidth = Number(nextValue);
+    setWidth(Number.isFinite(nextWidth) ? nextWidth : 0);
+    if (Number.isFinite(nextWidth) && nextWidth > 0) commitSize(nextWidth, height);
+  }
+
+  function updateHeight(nextValue: string) {
+    const nextHeight = Number(nextValue);
+    setHeight(Number.isFinite(nextHeight) ? nextHeight : 0);
+    if (Number.isFinite(nextHeight) && nextHeight > 0) commitSize(width, nextHeight);
+  }
+
+  function swapSize() {
+    commitSize(height, width);
+  }
+
+  function toggleAlignment(checked: boolean) {
+    setAlignToSixteen(checked);
+    if (checked && value !== 'auto') {
+      commitSize(width, height, true);
+    }
+  }
+
+  function selectPreset(preset: SizePreset) {
+    if (preset.value) {
+      onChange(preset.value);
+      setIsOpen(false);
+      return;
+    }
+    if (preset.width && preset.height) {
+      commitSize(preset.width, preset.height);
+      setIsOpen(false);
+    }
+  }
+
+  return (
+    <div className="image-studio__size-menu" ref={rootRef}>
+      <button className="image-studio__field image-studio__size-trigger" type="button" aria-haspopup="dialog" aria-expanded={isOpen} onClick={() => setIsOpen((open) => !open)}>
+        <span>尺寸</span>
+        <strong>{value}</strong>
+        <ChevronDownIcon />
+      </button>
+      {isOpen ? (
+        <div className="image-studio__size-panel" role="dialog" aria-label="尺寸">
+          <div className="image-studio__size-panel-head">
+            <strong>尺寸</strong>
+            <button type="button" aria-label="关闭尺寸面板" onClick={() => setIsOpen(false)}>×</button>
+          </div>
+          <div className="image-studio__size-inputs">
+            <label><span>W</span><input type="number" min={64} max={8192} value={width} onChange={(event) => updateWidth(event.target.value)} /></label>
+            <button className="image-studio__size-swap" type="button" aria-label="互换宽高" onClick={swapSize}><SwapIcon /></button>
+            <label><span>H</span><input type="number" min={64} max={8192} value={height} onChange={(event) => updateHeight(event.target.value)} /></label>
+          </div>
+          <label className="image-studio__size-align"><input type="checkbox" checked={alignToSixteen} onChange={(event) => toggleAlignment(event.target.checked)} /><span>16倍数对齐</span></label>
+          <div className="image-studio__size-presets" aria-label="宽高比预设">
+            {sizePresets.map((preset) => {
+              const presetValue = preset.value ?? `${preset.width}×${preset.height}`;
+              return <button className={presetValue === value ? 'image-studio__size-preset image-studio__size-preset--active' : 'image-studio__size-preset'} key={preset.label} type="button" onClick={() => selectPreset(preset)}>{preset.label}</button>;
+            })}
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
+}
 function ResultPanel({ currentRequest, onAddReference, onCopyConfig, onDeleteResult, onPreview, onSelect, results, selectedResultId, status }: { currentRequest: ImageGenerationRequest | null; onAddReference: (result: GenerationResult) => void; onCopyConfig: (result: GenerationResult) => void; onDeleteResult: (id: string) => void; onPreview: (result: GenerationResult) => void; onSelect: (id: string) => void; results: GenerationResult[]; selectedResultId: string | null; status: GenerationStatus }) { if (status === 'generating') return <div className="image-results__loading" aria-busy="true"><span /><strong>正在生成图片…</strong><p>真实 API 正在生成图片，请稍候。</p></div>; if (results.length === 0) return <div className="image-results__empty"><strong>还没有生成图片</strong><p>输入提示词并点击生成后，结果会显示在这里。</p></div>; return <div className="image-results__grid">{results.map((result) => <div className="image-results__item" key={result.id}><button aria-pressed={selectedResultId === result.id} className={`image-workbench__result-card image-workbench__result-card--${result.palette} ${selectedResultId === result.id ? 'image-workbench__result-card--active' : ''}`} onClick={() => onSelect(result.id)} onKeyDown={(event) => { if (event.key === 'Enter') onSelect(result.id); }} type="button">{result.imageUrl ? <img className="image-workbench__generated-image" src={result.imageUrl} alt={result.variantName} /> : <MockImage palette={result.palette} />}<div className="image-workbench__result-meta"><span>{result.variantName}</span><span aria-hidden="true">...</span></div></button><div className="image-results__actions"><button onClick={() => onPreview(result)} type="button">预览</button><button onClick={() => onAddReference(result)} type="button">加入参考图</button><button disabled={!currentRequest} onClick={() => void onCopyConfig(result)} type="button">复制参数</button><button onClick={() => onDeleteResult(result.id)} type="button">删除</button></div></div>)}</div>; }
 function HistoryPanel({ history, onDelete, onRestore }: { history: GenerationHistoryItem[]; onDelete: (id: string) => void; onRestore: (item: GenerationHistoryItem) => void }) { return <section className="image-history" aria-label="生成历史"><div className="image-history__head"><h3>生成历史</h3><span>{history.length}</span></div>{history.length === 0 ? <div className="image-history__empty">暂无生成历史</div> : history.map((item) => <div className="image-history__item" key={item.id}><button onClick={() => onRestore(item)} type="button"><strong>{summarize(item.request.prompt)}</strong><span>{formatTime(item.createdAt)} · {item.request.config.modelId} · {item.request.config.size} · {item.request.config.count} 张</span></button><span className={`image-history__badge image-history__badge--${item.status}`}>{getStatusLabel(item.status)}</span><button aria-label="删除历史" onClick={() => onDelete(item.id)} type="button">删除</button></div>)}</section>; }
 function PreviewModal({ onClose, result }: { onClose: () => void; result: GenerationResult }) { return <div className="image-preview-modal" role="dialog" aria-modal="true" aria-label="预览结果"><div><button aria-label="关闭预览" onClick={onClose} type="button">关闭</button>{result.imageUrl ? <img className="image-workbench__generated-image" src={result.imageUrl} alt={result.variantName} /> : <MockImage palette={result.palette} />}<strong>{result.variantName}</strong></div></div>; }
@@ -255,6 +374,18 @@ function normalizeImageSize(size: string) {
   return size.replace('×', 'x');
 }
 
+function parseSizeValue(value: string) {
+  const match = value.match(/^(\d+)\s*[×x]\s*(\d+)$/i);
+  if (!match) return { width: 1536, height: 1024 };
+  return { width: Number(match[1]), height: Number(match[2]) };
+}
+
+function normalizeDimension(value: number, alignToSixteen: boolean) {
+  const clamped = Math.min(8192, Math.max(64, Math.round(value || 64)));
+  if (!alignToSixteen) return clamped;
+  return Math.min(8192, Math.max(64, Math.round(clamped / 16) * 16));
+}
+
 function normalizeImageQuality(quality: QualityOption) {
   return ({ 自动: 'auto', 高: 'high', 中: 'medium', 低: 'low' } satisfies Record<QualityOption, string>)[quality];
 }
@@ -276,4 +407,5 @@ function ActionIcon({ variant }: { variant: number }) { const paths = [<path key
 function SvgIcon({ children }: { children: ReactNode }) { return <svg aria-hidden="true" fill="none" focusable="false" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24">{children}</svg>; }
 function CheckIcon() { return <SvgIcon><path d="M5 12l4 4L19 6" /></SvgIcon>; }
 function ChevronDownIcon() { return <SvgIcon><path d="m6 9 6 6 6-6" /></SvgIcon>; }
+function SwapIcon() { return <SvgIcon><path d="M7 7h10l-3-3M17 17H7l3 3M7 7l10 10" /></SvgIcon>; }
 function UploadIcon() { return <SvgIcon><path d="M12 16V4M7 9l5-5 5 5M5 20h14" /></SvgIcon>; }
