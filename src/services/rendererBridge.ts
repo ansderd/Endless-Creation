@@ -1,4 +1,9 @@
-import type { ApiConnectionTestResult, ApiProviderConfig } from '../types/apiProvider';
+import type {
+  ApiConnectionTestResult,
+  ApiImageGenerationRequest,
+  ApiImageGenerationResult,
+  ApiProviderConfig,
+} from '../types/apiProvider';
 import type { ThemeMode } from '../types/workspace';
 
 const THEME_STORAGE_KEY = 'ec-theme';
@@ -101,9 +106,21 @@ export const rendererBridge = {
 
     return electronBridge.api.testConnection(config);
   },
+
+  async generateImage(request: ApiImageGenerationRequest): Promise<ApiImageGenerationResult> {
+    const electronBridge = getElectronBridge();
+
+    if (!electronBridge) {
+      return {
+        ok: false,
+        message: '当前浏览器预览模式无法调用外部生图 API，请在 Electron 中打开后重试。',
+      };
+    }
+
+    return electronBridge.api.generateImage(request);
+  },
 };
 
 function getElectronBridge() {
   return globalThis.window?.endlessCreationBridge;
 }
-

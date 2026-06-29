@@ -17,3 +17,28 @@ export interface ApiConnectionTestResult {
   models?: string[];
 }
 
+export interface ApiImageGenerationRequest {
+  baseUrl: string;
+  apiKey: string;
+  model: string;
+  prompt: string;
+  negativePrompt?: string;
+  size: string;
+  quality: string;
+  count?: number;
+  n?: number;
+}
+
+export interface ApiGeneratedImage {
+  b64Json?: string;
+  url?: string;
+  revisedPrompt?: string;
+}
+
+export interface ApiImageGenerationResult {
+  ok: boolean;
+  status?: number;
+  message: string;
+  images?: ApiGeneratedImage[];
+}
+

@@ -16,6 +16,7 @@ const bridge: EndlessCreationBridge = {
   },
   api: {
     testConnection: (config) => ipcRenderer.invoke('api:test-connection', config),
+    generateImage: (request) => ipcRenderer.invoke('api:generate-image', request),
   },
 };
 
