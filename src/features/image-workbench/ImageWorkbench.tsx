@@ -24,7 +24,7 @@ const qualityOptions: QualityOption[] = ['自动', '高', '中', '低'];
 const quickActionsTop = ['提示词库', '方案库', '参数设置', '改稿实验', '存为模板'] as const;
 const quickActionsBottom = ['存方案包', '复制', '清空', 'Prompt Lab'] as const;
 const palettes: Palette[] = ['blue', 'cyan', 'violet', 'orange'];
-const baseConfig: ImageGenerationConfig = { modelId: '', size: '1536×1024', quality: '高', count: 4, style: '电影感', styleStrength: 72, referenceWeight: 60, saveToProject: true };
+const baseConfig: ImageGenerationConfig = { modelId: '', size: '1536×1024', quality: '高', count: 1, style: '电影感', styleStrength: 72, referenceWeight: 60, saveToProject: true };
 const sizePresets: SizePreset[] = [
   { label: '1:1', width: 1024, height: 1024 },
   { label: '3:2', width: 1536, height: 1024 },
