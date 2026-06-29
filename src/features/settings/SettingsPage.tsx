@@ -250,6 +250,7 @@ export function SettingsPage({ theme, onThemeChange, onClose }: SettingsPageProp
     const normalized = normalizeApiProviderStore(nextStore);
     setApiStore(normalized);
     writeStorage(API_PROVIDER_STORAGE_KEY, normalized);
+    notifyModelPreferencesUpdated();
     if (!quiet) setFeedback('渠道配置已保存。');
   }
 
@@ -353,6 +354,7 @@ export function SettingsPage({ theme, onThemeChange, onClose }: SettingsPageProp
     const nextPreferences = normalizeModelPreferencesForOptions({ ...modelPreferences, availableModels }, options);
     setModelPreferences(nextPreferences);
     writeStorage(MODEL_PREFERENCES_STORAGE_KEY, nextPreferences);
+    notifyModelPreferencesUpdated();
     return nextPreferences;
   }
 
@@ -430,12 +432,14 @@ export function SettingsPage({ theme, onThemeChange, onClose }: SettingsPageProp
     setModelPreferences(nextPreferences);
     persistApiStore(testedStore, true);
     writeStorage(MODEL_PREFERENCES_STORAGE_KEY, nextPreferences);
+    notifyModelPreferencesUpdated();
   }
 
   function saveModelPreferences() {
     const nextPreferences = normalizeModelPreferencesForOptions(modelPreferences, allModelOptions);
     setModelPreferences(nextPreferences);
     writeStorage(MODEL_PREFERENCES_STORAGE_KEY, nextPreferences);
+    notifyModelPreferencesUpdated();
     setFeedback('模型偏好已保存。');
   }
 
@@ -508,7 +512,9 @@ export function SettingsPage({ theme, onThemeChange, onClose }: SettingsPageProp
     setModelPreferences(nextPreferences);
     setTestResult(result);
     writeStorage(API_PROVIDER_STORAGE_KEY, testedStore);
+    notifyModelPreferencesUpdated();
     writeStorage(MODEL_PREFERENCES_STORAGE_KEY, nextPreferences);
+    notifyModelPreferencesUpdated();
   }
 
   async function testAllChannels() {
@@ -1361,6 +1367,10 @@ function readStorage<T>(key: string, fallback: T): T {
 
 function writeStorage<T>(key: string, value: T) {
   localStorage.setItem(key, JSON.stringify(value));
+}
+
+function notifyModelPreferencesUpdated() {
+  window.dispatchEvent(new CustomEvent('endless-creation:model-preferences-updated'));
 }
 
 function uniqueModels(models: string[]) {

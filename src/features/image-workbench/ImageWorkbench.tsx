@@ -28,8 +28,8 @@ let idSeed = 0;
 function createId(prefix: string) { idSeed += 1; return `${prefix}-${Date.now()}-${idSeed}`; }
 
 export function ImageWorkbench() {
-  const [modelPreferences] = useState<ModelPreferences>(() => readLocalStorage(MODEL_PREFERENCES_STORAGE_KEY, {}));
-  const [apiProviderStore] = useState<ApiProviderStore>(() => readLocalStorage(API_PROVIDER_STORAGE_KEY, {}));
+  const [modelPreferences, setModelPreferences] = useState<ModelPreferences>(() => readLocalStorage(MODEL_PREFERENCES_STORAGE_KEY, {}));
+  const [apiProviderStore, setApiProviderStore] = useState<ApiProviderStore>(() => readLocalStorage(API_PROVIDER_STORAGE_KEY, {}));
   const [promptText, setPromptText] = useState('');
   const [negativePrompt, setNegativePrompt] = useState('');
   const [references, setReferences] = useState<ReferenceImage[]>([]);
@@ -55,6 +55,38 @@ export function ImageWorkbench() {
   const selectedResult = results.find((result) => result.id === selectedResultId) ?? null;
   const imageModelLabel = selectedImageModel?.label ?? '未配置图片模型';
   const parameterSummary = `${imageModelLabel} · ${config.size} · ${config.quality} · ${config.count} 张`;
+
+  const refreshModelStores = useCallback(() => {
+    setModelPreferences(readLocalStorage(MODEL_PREFERENCES_STORAGE_KEY, {}));
+    setApiProviderStore(readLocalStorage(API_PROVIDER_STORAGE_KEY, {}));
+  }, []);
+
+  useEffect(() => {
+    refreshModelStores();
+
+    function refreshOnFocus() {
+      refreshModelStores();
+    }
+
+    function refreshOnVisibilityChange() {
+      if (!document.hidden) refreshModelStores();
+    }
+
+    function refreshOnStorage(event: StorageEvent) {
+      if (event.key === MODEL_PREFERENCES_STORAGE_KEY || event.key === API_PROVIDER_STORAGE_KEY) refreshModelStores();
+    }
+
+    window.addEventListener('focus', refreshOnFocus);
+    document.addEventListener('visibilitychange', refreshOnVisibilityChange);
+    window.addEventListener('storage', refreshOnStorage);
+    window.addEventListener('endless-creation:model-preferences-updated', refreshOnFocus);
+    return () => {
+      window.removeEventListener('focus', refreshOnFocus);
+      document.removeEventListener('visibilitychange', refreshOnVisibilityChange);
+      window.removeEventListener('storage', refreshOnStorage);
+      window.removeEventListener('endless-creation:model-preferences-updated', refreshOnFocus);
+    };
+  }, [refreshModelStores]);
 
   useEffect(() => {
     const preferredModel = normalizeImageModelValue(modelPreferences.imageModel, imageModelOptions);
