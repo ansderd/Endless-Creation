@@ -30,6 +30,7 @@ export interface ApiImageGenerationRequest {
   quality: string;
   count?: number;
   n?: number;
+  saveDirectory?: string;
 }
 
 export interface ApiGeneratedImage {

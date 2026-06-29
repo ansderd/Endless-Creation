@@ -28,6 +28,7 @@ export interface ApiImageGenerationRequest {
   quality: string;
   count?: number;
   n?: number;
+  saveDirectory?: string;
 }
 
 export interface ApiGeneratedImage {
@@ -56,6 +57,7 @@ export interface EndlessCreationBridge {
     getVersion(): Promise<string>;
     getPlatform(): Promise<string>;
     openGeneratedImageLocation(localPath?: string): Promise<{ ok: boolean; message: string }>;
+    selectGeneratedImagesDirectory(currentPath?: string): Promise<{ ok: boolean; message: string; path?: string }>;
   };
   window: {
     minimize(): Promise<void>;

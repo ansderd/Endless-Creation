@@ -1,4 +1,5 @@
-import { app, BrowserWindow, clipboard, ipcMain, shell } from 'electron';
+import { app, BrowserWindow, clipboard, dialog, ipcMain, shell } from 'electron';
+import type { OpenDialogOptions } from 'electron';
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 
@@ -32,6 +33,7 @@ interface ApiImageGenerationRequest {
   quality: string;
   count?: number;
   n?: number;
+  saveDirectory?: string;
 }
 
 interface ApiGeneratedImage {
@@ -148,6 +150,17 @@ function registerIpcHandlers(): void {
     await fs.mkdir(saveDir, { recursive: true });
     const errorMessage = await shell.openPath(saveDir);
     return errorMessage ? { ok: false, message: `打开保存目录失败：${errorMessage}` } : { ok: true, message: '已打开图片保存目录。' };
+  });
+  ipcMain.handle('app:select-generated-images-directory', async (_event, currentPath: unknown): Promise<{ ok: boolean; message: string; path?: string }> => {
+    const options: OpenDialogOptions = {
+      title: '选择图片保存位置',
+      defaultPath: typeof currentPath === 'string' && currentPath.trim() ? currentPath : getGeneratedImagesDir(),
+      properties: ['openDirectory', 'createDirectory'],
+    };
+    const result = mainWindow ? await dialog.showOpenDialog(mainWindow, options) : await dialog.showOpenDialog(options);
+
+    if (result.canceled || !result.filePaths[0]) return { ok: false, message: '已取消选择。' };
+    return { ok: true, message: '已更新保存位置。', path: result.filePaths[0] };
   });
 
   ipcMain.handle('window:minimize', (event) => {
@@ -281,6 +294,7 @@ function isApiImageGenerationRequest(request: unknown): request is ApiImageGener
     && typeof candidate.prompt === 'string'
     && typeof candidate.size === 'string'
     && typeof candidate.quality === 'string'
+    && (candidate.saveDirectory === undefined || typeof candidate.saveDirectory === 'string')
     && (candidate.negativePrompt === undefined || typeof candidate.negativePrompt === 'string')
     && (candidate.count === undefined || typeof candidate.count === 'number')
     && (candidate.n === undefined || typeof candidate.n === 'number');
@@ -379,7 +393,7 @@ async function generateOpenAiCompatibleImage(request: unknown): Promise<ApiImage
       };
     }
 
-    const images = await saveGeneratedImagesLocally(parsed.images);
+    const images = await saveGeneratedImagesLocally(parsed.images, request.saveDirectory);
 
     return {
       ok: true,
@@ -506,8 +520,8 @@ async function readImageGenerationResponse(
   return { images, errorMessage };
 }
 
-async function saveGeneratedImagesLocally(images: ApiGeneratedImage[]): Promise<ApiGeneratedImage[]> {
-  const saveDir = getGeneratedImagesDir();
+async function saveGeneratedImagesLocally(images: ApiGeneratedImage[], saveDirectory?: string): Promise<ApiGeneratedImage[]> {
+  const saveDir = saveDirectory?.trim() || getGeneratedImagesDir();
 
   return Promise.all(images.map(async (image, index) => {
     if (!image.b64Json) return image;

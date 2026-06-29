@@ -8,7 +8,7 @@ type QualityOption = '自动' | '低' | '中' | '高';
 type Palette = 'blue' | 'cyan' | 'violet' | 'orange';
 
 interface ReferenceImage { id: string; name: string; source: 'mock' | 'result'; previewLabel: string; palette: Palette; }
-interface ImageGenerationConfig { modelId: string; size: string; quality: QualityOption; count: number; style: string; styleStrength: number; referenceWeight: number; saveToProject: boolean; }
+interface ImageGenerationConfig { modelId: string; size: string; quality: QualityOption; count: number; style: string; styleStrength: number; referenceWeight: number; saveDirectory?: string; }
 interface ImageGenerationRequest { id: string; prompt: string; negativePrompt: string; references: ReferenceImage[]; config: ImageGenerationConfig; createdAt: string; }
 interface GenerationResult { id: string; requestId: string; variantName: string; status: 'succeeded' | 'failed'; palette: Palette; imageUrl?: string; revisedPrompt?: string; localPath?: string; fileName?: string; mimeType?: string; }
 interface GenerationHistoryItem { id: string; request: ImageGenerationRequest; status: GenerationStatus; results: GenerationResult[]; createdAt: string; durationMs?: number; errorMessage?: string; }
@@ -20,11 +20,12 @@ interface SizePreset { label: string; width?: number; height?: number; value?: s
 
 const MODEL_PREFERENCES_STORAGE_KEY = 'endless-creation.model-preferences';
 const API_PROVIDER_STORAGE_KEY = 'endless-creation.api-provider-config';
+const IMAGE_SAVE_DIRECTORY_STORAGE_KEY = 'endless-creation.image-save-directory';
 const qualityOptions: QualityOption[] = ['自动', '高', '中', '低'];
 const quickActionsTop = ['提示词库', '方案库', '参数设置', '改稿实验', '存为模板'] as const;
 const quickActionsBottom = ['存方案包', '复制', '清空', 'Prompt Lab'] as const;
 const palettes: Palette[] = ['blue', 'cyan', 'violet', 'orange'];
-const baseConfig: ImageGenerationConfig = { modelId: '', size: '1536×1024', quality: '高', count: 1, style: '电影感', styleStrength: 72, referenceWeight: 60, saveToProject: true };
+const baseConfig: ImageGenerationConfig = { modelId: '', size: '1536×1024', quality: '高', count: 1, style: '电影感', styleStrength: 72, referenceWeight: 60, saveDirectory: readLocalStorage(IMAGE_SAVE_DIRECTORY_STORAGE_KEY, '') };
 const sizePresets: SizePreset[] = [
   { label: '1:1', width: 1024, height: 1024 },
   { label: '3:2', width: 1536, height: 1024 },
@@ -150,6 +151,7 @@ export function ImageWorkbench() {
         size: normalizeImageSize(request.config.size),
         quality: normalizeImageQuality(request.config.quality),
         count: request.config.count,
+        saveDirectory: request.config.saveDirectory,
       });
 
       if (generationRunRef.current !== runId) return;
@@ -183,6 +185,7 @@ export function ImageWorkbench() {
   function removeReference(id: string) { setReferences((current) => current.filter((item) => item.id !== id)); setFeedback('已移除参考图。'); }
   async function copyText(text: string, success: string) { if (!text.trim()) { setFeedback('没有可复制的内容。'); return; } try { await rendererBridge.copyText(text); setFeedback(success); } catch { setFeedback('复制失败，请手动复制。'); } }
   function handleQuickAction(action: string) { if (action === '清空') { setPromptText(''); setNegativePrompt(''); setStatus('idle'); setFeedback('提示词已清空。'); return; } if (action === '复制') { void copyText(promptText, '提示词已复制。'); return; } setFeedback(`${action} 暂未接入真实功能。`); }
+  async function chooseSaveDirectory() { const result = await rendererBridge.selectGeneratedImagesDirectory(config.saveDirectory); if (result.ok && result.path) { updateConfig({ saveDirectory: result.path }); writeLocalStorage(IMAGE_SAVE_DIRECTORY_STORAGE_KEY, result.path); } setFeedback(result.message); }
   async function copyResultConfig(result: GenerationResult) { if (!currentRequest) { setFeedback('暂无生成参数可复制。'); return; } await copyText(JSON.stringify({ resultId: result.id, prompt: currentRequest.prompt, negativePrompt: currentRequest.negativePrompt, config: currentRequest.config, localPath: result.localPath, fileName: result.fileName, mimeType: result.mimeType }, null, 2), '参数已复制。'); }
   async function openResultLocation(result: GenerationResult) { const response = await rendererBridge.openGeneratedImageLocation(result.localPath); setFeedback(response.message); }
   function deleteResult(resultId: string) { setResults((current) => { const next = current.filter((item) => item.id !== resultId); if (selectedResultId === resultId) setSelectedResultId(next[0]?.id ?? null); if (next.length === 0 && status === 'succeeded') setStatus('idle'); return next; }); setFeedback('结果已删除。'); }
@@ -198,7 +201,7 @@ export function ImageWorkbench() {
         <div className="image-workbench__columns image-workbench__columns--merged">
           <section className="image-workbench__card image-workbench__card--composer image-workbench__card--image-studio">
 <div className="image-studio__params" aria-label="生图参数"><div className="image-studio__model-menu" ref={modelMenuRef}><button className="image-studio__field image-studio__field--select image-studio__model-trigger" type="button" disabled={imageModelOptions.length === 0} aria-haspopup="listbox" aria-expanded={isModelMenuOpen} onClick={() => { if (imageModelOptions.length) setModelMenuOpen((open) => !open); }}><span>图片模型</span><strong>{imageModelLabel}</strong><ChevronDownIcon /></button>{isModelMenuOpen && imageModelOptions.length ? <div className="image-studio__model-dropdown" role="listbox" aria-label="图片模型">{imageModelOptions.map((option) => { const selected = option.value === config.modelId; return <button className={selected ? 'image-studio__model-option image-studio__model-option--active' : 'image-studio__model-option'} type="button" role="option" aria-selected={selected} key={option.value} onClick={() => { updateConfig({ modelId: option.value }); setModelMenuOpen(false); }}><span aria-hidden="true" /><strong>{option.label}</strong></button>; })}</div> : null}</div><SizeField value={config.size} onChange={(size) => updateConfig({ size })} /><div className="image-studio__field image-studio__field--quality"><span>质量</span><div className="image-studio__quality-group" role="group" aria-label="质量">{qualityOptions.map((option) => <button aria-pressed={config.quality === option} className={config.quality === option ? 'image-studio__quality image-studio__quality--active' : 'image-studio__quality'} key={option} onClick={() => updateConfig({ quality: option })} type="button">{option}</button>)}</div></div><CompactNumber label="数量" value={config.count} min={1} max={4} onChange={(count) => updateConfig({ count })} /></div>
-            <div className="image-studio__status-strip"><label className="image-studio__save-option"><input checked={config.saveToProject} onChange={(event) => updateConfig({ saveToProject: event.target.checked })} type="checkbox" /><span aria-hidden="true" className="image-workbench__checkbox"><CheckIcon /></span><span>保存到本地项目</span></label><div className="image-studio__queue-inline"><span>队列</span><strong>{status === 'generating' ? '真实 API 生成中' : '暂无等待任务'}</strong></div></div>
+            <div className="image-studio__status-strip"><button className="image-studio__save-option" onClick={() => void chooseSaveDirectory()} title={config.saveDirectory || '默认保存位置'} type="button"><span aria-hidden="true" className="image-workbench__checkbox"><CheckIcon /></span><span>保存到</span><strong>{config.saveDirectory ? getPathName(config.saveDirectory) : '默认位置'}</strong></button><div className="image-studio__queue-inline"><span>队列</span><strong>{status === 'generating' ? '真实 API 生成中' : '暂无等待任务'}</strong></div></div>
             <label className="image-studio__prompt-area"><span>提示词</span><textarea aria-invalid={Boolean(promptError)} aria-label="提示词" maxLength={4000} onChange={(event) => updatePrompt(event.target.value)} placeholder="描述画面主体、风格、构图、光线和用途" value={promptText} /></label><div className="image-studio__count" aria-live="polite">{promptText.length}/4000</div>{promptError && <div className="image-studio__hint image-studio__hint--error" role="alert">{promptError}</div>}
             <label className="image-studio__prompt-area image-studio__prompt-area--negative"><span>反向提示词</span><textarea aria-label="反向提示词" maxLength={1000} onChange={(event) => setNegativePrompt(event.target.value)} placeholder="不希望出现的元素，例如低清晰度、畸形、过曝" value={negativePrompt} /></label>
             <div className="image-studio__upload-zone"><button className="image-studio__upload-button" disabled={references.length >= 4} onClick={() => addMockReference()} type="button"><UploadIcon /><span>上传参考图</span></button><div><strong>可选上传参考图，支持图生图/重绘</strong><p>最多 4 张，每张 8MB；当前模型会走参考图生成通道。</p></div></div>
@@ -291,6 +294,18 @@ function readLocalStorage<T>(key: string, fallback: T): T {
   } catch {
     return fallback;
   }
+}
+
+function writeLocalStorage<T>(key: string, value: T): void {
+  try {
+    window.localStorage.setItem(key, JSON.stringify(value));
+  } catch {
+    // Ignore storage failures in restricted renderer contexts.
+  }
+}
+
+function getPathName(value: string) {
+  return value.split(/[\\/]/).filter(Boolean).pop() ?? value;
 }
 
 function resolveImageModelOptions(modelPreferences: ModelPreferences, apiProviderStore: ApiProviderStore): ImageModelOption[] {

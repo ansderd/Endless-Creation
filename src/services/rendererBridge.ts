@@ -29,6 +29,12 @@ export const rendererBridge = {
     return electronBridge.app.openGeneratedImageLocation(localPath);
   },
 
+  async selectGeneratedImagesDirectory(currentPath?: string): Promise<{ ok: boolean; message: string; path?: string }> {
+    const electronBridge = getElectronBridge();
+    if (!electronBridge) return { ok: false, message: '当前浏览器预览模式无法选择保存位置，请在 Electron 桌面端中重试。' };
+    return electronBridge.app.selectGeneratedImagesDirectory(currentPath);
+  },
+
   async minimizeWindow(): Promise<void> {
     await getElectronBridge()?.window.minimize();
   },
