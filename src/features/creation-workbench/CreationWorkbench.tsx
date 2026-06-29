@@ -208,7 +208,7 @@ export function CreationWorkbench({ mode }: CreationWorkbenchProps) {
         <div className="prompt-box" role="form" aria-label="创作提示输入">
           <label htmlFor="creation-prompt">输入创作提示</label>
           <textarea
-            aria-describedby={validationMessage ? 'prompt-error' : 'mock-service-note'}
+            aria-describedby={validationMessage ? 'prompt-error' : 'service-note'}
             aria-invalid={Boolean(validationMessage)}
             disabled={submitState === 'loading'}
             id="creation-prompt"
@@ -221,7 +221,7 @@ export function CreationWorkbench({ mode }: CreationWorkbenchProps) {
           />
           {validationMessage && <p className="field-error" id="prompt-error" role="alert">{validationMessage}</p>}
           <div className="prompt-box__actions">
-            <span id="mock-service-note">{aiServiceStatus.provider} · {aiServiceStatus.connected ? '已连接' : '离线模拟'} · Ctrl+Enter 生成</span>
+            <span id="service-note">{aiServiceStatus.provider} · {aiServiceStatus.connected ? '已连接' : '离线模拟'} · Ctrl+Enter 生成</span>
             <div className="prompt-box__buttons">
               {submitState === 'loading' && (
                 <Button onClick={handleCancelGeneration} variant="soft" type="button">

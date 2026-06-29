@@ -9,7 +9,7 @@ export interface AiServiceStatus {
 export const aiServiceStatus: AiServiceStatus = {
   connected: false,
   provider: '本地模拟客户端',
-  note: 'v0.2 使用异步 mock client 模拟生成任务，未来可替换为真实 AI API。',
+  note: 'v0.2 使用异步 local client 模拟生成任务，未来可替换为真实 AI API。',
 };
 
 export interface CreateGenerationTaskInput {

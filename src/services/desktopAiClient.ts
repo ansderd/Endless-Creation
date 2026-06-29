@@ -150,7 +150,7 @@ function createMockResult(mode: GenerationMode, prompt: string, status: Generati
     content: [
       `【${label} Mock 结果】`,
       `创作目标：${normalizedPrompt}`,
-      '桌面端边界：当前仅由 renderer mock client 生成，未来可无缝切到 preload → IPC → main process。',
+      '桌面端边界：当前仅由 renderer local client 生成，未来可无缝切到 preload → IPC → main process。',
       '下一步：可把这条结果转为项目草稿，后续由 project bridge 保存到本地项目。',
     ].join('\n'),
   };
