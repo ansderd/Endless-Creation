@@ -218,16 +218,6 @@ function CompactNumber({ disabled = false, hint, label, max, min, onChange, suff
 function SizeField({ onChange, value }: { onChange: (value: string) => void; value: string }) {
   const rootRef = useRef<HTMLDivElement | null>(null);
   const [isOpen, setIsOpen] = useState(false);
-  const [alignToSixteen, setAlignToSixteen] = useState(true);
-  const parsedSize = parseSizeValue(value);
-  const [width, setWidth] = useState(parsedSize.width);
-  const [height, setHeight] = useState(parsedSize.height);
-
-  useEffect(() => {
-    const nextSize = parseSizeValue(value);
-    setWidth(nextSize.width);
-    setHeight(nextSize.height);
-  }, [value]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -245,37 +235,6 @@ function SizeField({ onChange, value }: { onChange: (value: string) => void; val
     };
   }, [isOpen]);
 
-  function commitSize(nextWidth: number, nextHeight: number, shouldAlign = alignToSixteen) {
-    const safeWidth = normalizeDimension(nextWidth, shouldAlign);
-    const safeHeight = normalizeDimension(nextHeight, shouldAlign);
-    setWidth(safeWidth);
-    setHeight(safeHeight);
-    onChange(`${safeWidth}×${safeHeight}`);
-  }
-
-  function updateWidth(nextValue: string) {
-    const nextWidth = Number(nextValue);
-    setWidth(Number.isFinite(nextWidth) ? nextWidth : 0);
-    if (Number.isFinite(nextWidth) && nextWidth > 0) commitSize(nextWidth, height);
-  }
-
-  function updateHeight(nextValue: string) {
-    const nextHeight = Number(nextValue);
-    setHeight(Number.isFinite(nextHeight) ? nextHeight : 0);
-    if (Number.isFinite(nextHeight) && nextHeight > 0) commitSize(width, nextHeight);
-  }
-
-  function swapSize() {
-    commitSize(height, width);
-  }
-
-  function toggleAlignment(checked: boolean) {
-    setAlignToSixteen(checked);
-    if (checked && value !== 'auto') {
-      commitSize(width, height, true);
-    }
-  }
-
   function selectPreset(preset: SizePreset) {
     if (preset.value) {
       onChange(preset.value);
@@ -283,7 +242,7 @@ function SizeField({ onChange, value }: { onChange: (value: string) => void; val
       return;
     }
     if (preset.width && preset.height) {
-      commitSize(preset.width, preset.height);
+      onChange(`${preset.width}×${preset.height}`);
       setIsOpen(false);
     }
   }
@@ -291,20 +250,14 @@ function SizeField({ onChange, value }: { onChange: (value: string) => void; val
   return (
     <div className="image-studio__size-menu" ref={rootRef}>
       <button className="image-studio__field image-studio__size-trigger" type="button" aria-haspopup="dialog" aria-expanded={isOpen} onClick={() => setIsOpen((open) => !open)}>
-        <span>尺寸</span>
-        <strong>{value}</strong>
+        <span>画面比例</span>
+        <strong>{getAspectRatioLabel(value)}</strong>
         <ChevronDownIcon />
       </button>
       {isOpen ? (
-        <div className="image-studio__size-panel" role="dialog" aria-label="尺寸">
+        <div className="image-studio__size-panel" role="dialog" aria-label="画面比例">
           <div className="image-studio__size-panel-head">
-            <strong>尺寸</strong>
-            <label className="image-studio__size-align"><input type="checkbox" checked={alignToSixteen} onChange={(event) => toggleAlignment(event.target.checked)} /><span>16倍数对齐</span></label>
-          </div>
-          <div className="image-studio__size-inputs">
-            <label><span>W</span><input type="number" min={64} max={8192} value={width} onChange={(event) => updateWidth(event.target.value)} /></label>
-            <button className="image-studio__size-swap" type="button" aria-label="互换宽高" onClick={swapSize}><SwapIcon /></button>
-            <label><span>H</span><input type="number" min={64} max={8192} value={height} onChange={(event) => updateHeight(event.target.value)} /></label>
+            <strong>画面比例</strong>
           </div>
           <strong className="image-studio__size-section-title">宽高比</strong>
           <div className="image-studio__size-presets" aria-label="宽高比预设">
@@ -375,16 +328,28 @@ function normalizeImageSize(size: string) {
   return size.replace('×', 'x');
 }
 
-function parseSizeValue(value: string) {
+function getAspectRatioLabel(value: string) {
+  if (value === 'auto') return 'auto';
+  const preset = sizePresets.find((item) => (item.value ?? `${item.width}×${item.height}`) === value);
+  if (preset) return preset.label.replace(/\(.+\)$/, '');
   const match = value.match(/^(\d+)\s*[×x]\s*(\d+)$/i);
-  if (!match) return { width: 1536, height: 1024 };
-  return { width: Number(match[1]), height: Number(match[2]) };
+  if (!match) return value;
+  const width = Number(match[1]);
+  const height = Number(match[2]);
+  if (!width || !height) return value;
+  const divisor = greatestCommonDivisor(width, height);
+  return `${width / divisor}:${height / divisor}`;
 }
 
-function normalizeDimension(value: number, alignToSixteen: boolean) {
-  const clamped = Math.min(8192, Math.max(64, Math.round(value || 64)));
-  if (!alignToSixteen) return clamped;
-  return Math.min(8192, Math.max(64, Math.round(clamped / 16) * 16));
+function greatestCommonDivisor(left: number, right: number): number {
+  let a = Math.abs(left);
+  let b = Math.abs(right);
+  while (b) {
+    const next = a % b;
+    a = b;
+    b = next;
+  }
+  return a || 1;
 }
 
 function normalizeImageQuality(quality: QualityOption) {
@@ -408,5 +373,4 @@ function ActionIcon({ variant }: { variant: number }) { const paths = [<path key
 function SvgIcon({ children }: { children: ReactNode }) { return <svg aria-hidden="true" fill="none" focusable="false" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24">{children}</svg>; }
 function CheckIcon() { return <SvgIcon><path d="M5 12l4 4L19 6" /></SvgIcon>; }
 function ChevronDownIcon() { return <SvgIcon><path d="m6 9 6 6 6-6" /></SvgIcon>; }
-function SwapIcon() { return <SvgIcon><path d="M7 7h10l-3-3M17 17H7l3 3M7 7l10 10" /></SvgIcon>; }
 function UploadIcon() { return <SvgIcon><path d="M12 16V4M7 9l5-5 5 5M5 20h14" /></SvgIcon>; }

@@ -1075,9 +1075,7 @@
   box-shadow: 0 20px 48px rgba(2, 6, 23, 0.32);
 }
 
-.image-studio__size-panel-head,
-.image-studio__size-inputs,
-.image-studio__size-align {
+.image-studio__size-panel-head {
   display: flex;
   align-items: center;
 }
@@ -1091,76 +1089,6 @@
 .image-studio__size-panel-head strong {
   font-size: 15px;
   font-weight: 860;
-}
-
-.image-studio__size-inputs {
-  gap: 9px;
-}
-
-.image-studio__size-inputs label {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  align-items: center;
-  gap: 8px;
-  min-width: 0;
-  flex: 1;
-  padding: 7px 10px;
-  border: 1px solid rgba(148, 163, 184, 0.24);
-  border-radius: 13px;
-  background: rgba(255, 255, 255, 0.04);
-}
-
-.image-studio__size-inputs label:focus-within {
-  border-color: rgba(75, 131, 255, 0.96);
-  box-shadow: 0 0 0 2px rgba(75, 131, 255, 0.16);
-}
-
-.image-studio__size-inputs span {
-  color: #6fa0ff;
-  font-size: 12px;
-  font-weight: 900;
-}
-
-.image-studio__size-inputs input {
-  width: 100%;
-  min-width: 0;
-  border: 0;
-  outline: 0;
-  color: var(--image-text);
-  background: transparent;
-  font: inherit;
-  font-size: 15px;
-  font-weight: 850;
-}
-
-.image-studio__size-swap {
-  width: 34px;
-  height: 34px;
-  border: 1px solid rgba(148, 163, 184, 0.28);
-  border-radius: 12px;
-  color: #6fa0ff;
-  background: rgba(91, 134, 255, 0.12);
-  cursor: pointer;
-}
-
-.image-studio__size-swap svg {
-  width: 16px;
-  height: 16px;
-}
-
-.image-studio__size-align {
-  justify-content: flex-end;
-  gap: 10px;
-  color: var(--image-muted);
-  font-size: 13px;
-  font-weight: 780;
-  white-space: nowrap;
-}
-
-.image-studio__size-align input {
-  width: 18px;
-  height: 18px;
-  accent-color: #4b83ff;
 }
 
 .image-studio__size-section-title {
@@ -1398,14 +1326,8 @@
   box-shadow: 0 20px 48px rgba(15, 23, 42, 0.16);
 }
 
-.app-shell[data-theme='light'] .image-studio__size-inputs label,
-.app-shell[data-theme='light'] .image-studio__size-panel-head button,
 .app-shell[data-theme='light'] .image-studio__size-preset {
   background: #f4f7fb;
-}
-
-.app-shell[data-theme='light'] .image-studio__size-inputs input {
-  color: #1f2a3d;
 }
 
 .app-shell[data-theme='light'] .image-studio__quality:hover,
