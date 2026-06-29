@@ -56,13 +56,16 @@
 .image-studio__prompt-area--negative textarea { @apply min-h-16; }
 .image-studio__count { @apply -mt-4 text-right text-xs font-semibold text-slate-400; }
 .image-studio__upload-zone { @apply flex items-center justify-center gap-4 rounded-2xl border-2 border-dashed border-gray-200 bg-gray-50 p-6 text-center; }
+.image-studio__file-input { @apply hidden; }
 .image-studio__upload-button { @apply inline-flex items-center gap-2 rounded-xl bg-white px-4 py-3 text-sm font-black text-blue-600 shadow-sm disabled:cursor-not-allowed disabled:opacity-50; }
 .image-studio__upload-button svg { @apply h-5 w-5; }
 .image-studio__upload-zone strong { @apply block text-sm font-black text-slate-800; }
 .image-studio__upload-zone p { @apply mt-1 text-xs text-slate-400; }
 .image-studio__reference-list { @apply flex min-h-8 flex-wrap gap-2; }
 .image-studio__empty-inline { @apply text-sm font-semibold text-slate-400; }
-.image-studio__reference { @apply inline-flex items-center gap-2 rounded-full bg-blue-50 px-3 py-1.5 text-xs font-bold text-blue-600; }
+.image-studio__reference { @apply inline-flex max-w-full items-center gap-2 rounded-full bg-blue-50 py-1.5 pl-1.5 pr-3 text-xs font-bold text-blue-600; }
+.image-studio__reference img { @apply h-8 w-8 rounded-full object-cover; }
+.image-studio__reference span { @apply max-w-40 truncate; }
 .image-studio__reference button { @apply rounded-full px-2 text-blue-400 hover:bg-blue-100; }
 .image-studio__actions { @apply hidden; }
 .image-studio__hint,.image-studio__loading { @apply rounded-2xl bg-blue-50 p-3 text-sm font-bold text-blue-700; }

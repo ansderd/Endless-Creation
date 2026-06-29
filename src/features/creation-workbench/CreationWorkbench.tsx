@@ -153,7 +153,7 @@ export function CreationWorkbench({ mode }: CreationWorkbenchProps) {
         status: 'failed',
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
-        errorMessage: '本地 mock client 出现异常，请重试。',
+        errorMessage: '本地 generation service 出现异常，请重试。',
       };
       setTask(failedTask);
       rememberTask(failedTask);
@@ -277,7 +277,7 @@ export function CreationWorkbench({ mode }: CreationWorkbenchProps) {
               ) : (
                 <div className="result-body">
                   <div>
-                    <span className="generation-result__label">AI Mock 摘要</span>
+                    <span className="generation-result__label">AI 摘要</span>
                     <h3>{task.result?.title}</h3>
                     <p>{task.result?.summary}</p>
                   </div>
@@ -297,7 +297,7 @@ export function CreationWorkbench({ mode }: CreationWorkbenchProps) {
                 <span />
                 <span />
               </div>
-              <p>选择左侧功能，输入提示并点击生成。这里会展示本次 mock AI 任务的状态、摘要和可复制结果。</p>
+              <p>选择左侧功能，输入提示并点击生成。这里会展示本次 generation 任务的状态、摘要和可复制结果。</p>
             </div>
           )}
         </Panel>
