@@ -248,6 +248,8 @@ userData/
 
 `listNovels()` 直接扫描 `novels/*/novel.json` 生成列表摘要；第一阶段不维护 `index.json`。不要拆每章一个文件。
 
+性能登记：如果后续本地小说数量增长导致列表加载明显变慢，再引入 `index.json` 或摘要缓存；第一阶段不做。
+
 `NovelSummary` 仅供列表使用：
 
 ```ts
