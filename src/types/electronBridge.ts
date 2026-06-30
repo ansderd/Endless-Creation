@@ -10,6 +10,9 @@ export interface EndlessCreationBridge {
     readGeneratedImageDataUrl(localPath: string): Promise<{ ok: boolean; message: string; dataUrl?: string }>;
     openGeneratedImageLocation(localPath?: string): Promise<{ ok: boolean; message: string }>;
     selectGeneratedImagesDirectory(currentPath?: string): Promise<{ ok: boolean; message: string; path?: string }>;
+    loadProjectAssets(projectId: string): Promise<{ ok: boolean; message: string; collection?: unknown }>;
+    saveProjectAssets(projectId: string, collection: unknown): Promise<{ ok: boolean; message: string }>;
+    deleteProjectAssetFile(projectId: string, relativePath: string): Promise<{ ok: boolean; message: string }>;
   };
   window: {
     minimize(): Promise<void>;

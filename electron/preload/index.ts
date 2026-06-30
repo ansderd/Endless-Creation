@@ -10,6 +10,9 @@ const bridge: EndlessCreationBridge = {
     readGeneratedImageDataUrl: (localPath) => ipcRenderer.invoke('app:read-generated-image-data-url', localPath),
     openGeneratedImageLocation: (localPath) => ipcRenderer.invoke('app:open-generated-image-location', localPath),
     selectGeneratedImagesDirectory: (currentPath) => ipcRenderer.invoke('app:select-generated-images-directory', currentPath),
+    loadProjectAssets: (projectId) => ipcRenderer.invoke('app:load-project-assets', projectId),
+    saveProjectAssets: (projectId, collection) => ipcRenderer.invoke('app:save-project-assets', projectId, collection),
+    deleteProjectAssetFile: (projectId, relativePath) => ipcRenderer.invoke('app:delete-project-asset-file', projectId, relativePath),
   },
   window: {
     minimize: () => ipcRenderer.invoke('window:minimize'),

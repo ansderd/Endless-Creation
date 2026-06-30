@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { ComponentType, SVGProps } from 'react';
 import type { ThemeMode } from '../types/workspace';
 import { rendererBridge } from '../services/rendererBridge';
+import { AssetManagement } from '../features/asset-management';
 import { ImageWorkbench } from '../features/image-workbench';
 import { ProjectManagement } from '../features/project-management';
 import { CanvasWorkbench } from '../features/canvas-workbench';
@@ -250,6 +251,8 @@ export function App() {
 
       {activeNavId === 'image-workbench' ? (
         <ImageWorkbench />
+      ) : activeNavId === 'assets' || activeNavId.startsWith('asset-') ? (
+        <AssetManagement />
       ) : activeNavId === 'projects' && activeCanvasId ? (
         <CanvasWorkbench canvasId={activeCanvasId} onBack={() => setActiveCanvasId(null)} keyboardDisabled={isSettingsOpen} />
       ) : activeNavId === 'projects' ? (

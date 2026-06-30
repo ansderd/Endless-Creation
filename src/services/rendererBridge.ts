@@ -48,6 +48,26 @@ export const rendererBridge = {
     return electronBridge.app.selectGeneratedImagesDirectory(currentPath);
   },
 
+  async loadProjectAssets(projectId: string): Promise<{ ok: boolean; message: string; collection?: unknown }> {
+    const electronBridge = getElectronBridge();
+    if (electronBridge) return electronBridge.app.loadProjectAssets(projectId);
+    return { ok: true, message: 'web fallback', collection: readWebProjectAssets(projectId) };
+  },
+
+  async saveProjectAssets(projectId: string, collection: unknown): Promise<{ ok: boolean; message: string }> {
+    const electronBridge = getElectronBridge();
+    if (electronBridge) return electronBridge.app.saveProjectAssets(projectId, collection);
+    writeWebProjectAssets(projectId, collection);
+    return { ok: true, message: 'web fallback' };
+  },
+
+  async deleteProjectAssetFile(projectId: string, relativePath: string): Promise<{ ok: boolean; message: string }> {
+    const electronBridge = getElectronBridge();
+    if (electronBridge) return electronBridge.app.deleteProjectAssetFile(projectId, relativePath);
+    return { ok: true, message: 'web fallback' };
+  },
+
+
   async minimizeWindow(): Promise<void> {
     await getElectronBridge()?.window.minimize();
   },
@@ -162,4 +182,25 @@ export const rendererBridge = {
 
 function getElectronBridge() {
   return globalThis.window?.endlessCreationBridge;
+}
+
+function projectAssetsStorageKey(projectId: string): string {
+  return `endless-creation.project-assets.${projectId || 'default'}`;
+}
+
+function readWebProjectAssets(projectId: string): unknown {
+  try {
+    const raw = globalThis.localStorage?.getItem(projectAssetsStorageKey(projectId));
+    return raw ? JSON.parse(raw) : { version: 1, assets: [] };
+  } catch {
+    return { version: 1, assets: [] };
+  }
+}
+
+function writeWebProjectAssets(projectId: string, collection: unknown): void {
+  try {
+    globalThis.localStorage?.setItem(projectAssetsStorageKey(projectId), JSON.stringify(collection));
+  } catch {
+    // Ignore storage failures in restricted renderer contexts.
+  }
 }

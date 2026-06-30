@@ -224,6 +224,58 @@ async function readGeneratedImageDataUrl(localPath: unknown): Promise<{ ok: bool
   }
 }
 
+function safeProjectId(projectId: unknown): string {
+  return typeof projectId === 'string' && projectId.trim()
+    ? projectId.trim().replace(/[^a-zA-Z0-9._-]+/g, '-').slice(0, 80)
+    : 'default';
+}
+
+function getProjectAssetsDir(projectId: unknown): string {
+  return path.join(app.getPath('userData'), 'projects', safeProjectId(projectId));
+}
+
+function getProjectAssetsPath(projectId: unknown): string {
+  return path.join(getProjectAssetsDir(projectId), 'project-assets.json');
+}
+
+async function loadProjectAssets(projectId: unknown): Promise<{ ok: boolean; message: string; collection?: unknown }> {
+  try {
+    const raw = await fs.readFile(getProjectAssetsPath(projectId), 'utf-8');
+    const parsed = JSON.parse(raw) as unknown;
+    return { ok: true, message: '资产已加载。', collection: parsed };
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') console.warn('Failed to load project assets:', error);
+    return { ok: true, message: '资产已加载。', collection: { version: 1, assets: [] } };
+  }
+}
+
+async function saveProjectAssets(projectId: unknown, collection: unknown): Promise<{ ok: boolean; message: string }> {
+  try {
+    const filePath = getProjectAssetsPath(projectId);
+    await fs.mkdir(path.dirname(filePath), { recursive: true });
+    await fs.writeFile(filePath, JSON.stringify(collection, null, 2), 'utf-8');
+    return { ok: true, message: '资产已保存。' };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : '未知错误';
+    return { ok: false, message: `保存资产失败：${message}` };
+  }
+}
+
+async function deleteProjectAssetFile(projectId: unknown, relativePath: unknown): Promise<{ ok: boolean; message: string }> {
+  if (typeof relativePath !== 'string' || !relativePath.trim()) return { ok: true, message: '没有需要删除的文件。' };
+  const root = getProjectAssetsDir(projectId);
+  const target = path.resolve(root, relativePath);
+  if (!isPathInsideRoot(target, root)) return { ok: false, message: '资产文件路径不在项目目录内。' };
+  try {
+    await fs.unlink(target);
+    return { ok: true, message: '资产文件已删除。' };
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return { ok: true, message: '资产文件不存在，已忽略。' };
+    const message = error instanceof Error ? error.message : '未知错误';
+    return { ok: false, message: `删除资产文件失败：${message}` };
+  }
+}
+
 function registerIpcHandlers(): void {
   ipcMain.handle('app:get-version', () => app.getVersion());
   ipcMain.handle('app:get-platform', () => process.platform);
@@ -241,6 +293,9 @@ function registerIpcHandlers(): void {
     const errorMessage = await shell.openPath(saveDir);
     return errorMessage ? { ok: false, message: `打开保存目录失败：${errorMessage}` } : { ok: true, message: '已打开图片保存目录。' };
   });
+  ipcMain.handle('app:load-project-assets', (_event, projectId: unknown) => loadProjectAssets(projectId));
+  ipcMain.handle('app:save-project-assets', (_event, projectId: unknown, collection: unknown) => saveProjectAssets(projectId, collection));
+  ipcMain.handle('app:delete-project-asset-file', (_event, projectId: unknown, relativePath: unknown) => deleteProjectAssetFile(projectId, relativePath));
   ipcMain.handle('app:select-generated-images-directory', async (_event, currentPath: unknown): Promise<{ ok: boolean; message: string; path?: string }> => {
     const options: OpenDialogOptions = {
       title: '选择图片保存位置',
