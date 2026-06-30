@@ -7,6 +7,7 @@ export interface EndlessCreationBridge {
     getPlatform(): Promise<string>;
     loadImageGenerationHistory(): Promise<{ ok: boolean; items: unknown[] }>;
     saveImageGenerationHistory(items: unknown[]): Promise<{ ok: boolean; message: string }>;
+    readGeneratedImageDataUrl(localPath: string): Promise<{ ok: boolean; message: string; dataUrl?: string }>;
     openGeneratedImageLocation(localPath?: string): Promise<{ ok: boolean; message: string }>;
     selectGeneratedImagesDirectory(currentPath?: string): Promise<{ ok: boolean; message: string; path?: string }>;
   };

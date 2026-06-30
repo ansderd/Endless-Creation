@@ -229,7 +229,7 @@ export function ImageWorkbench() {
   async function copyResultConfig(result: GenerationResult) { if (!currentRequest) { setFeedback('暂无生成参数可复制。'); return; } await copyText(JSON.stringify({ resultId: result.id, prompt: currentRequest.prompt, negativePrompt: currentRequest.negativePrompt, config: currentRequest.config, localPath: result.localPath, fileName: result.fileName, mimeType: result.mimeType }, null, 2), '参数已复制。'); }
   async function openResultLocation(result: GenerationResult) { const response = await rendererBridge.openGeneratedImageLocation(result.localPath); setFeedback(response.message); }
   function deleteResult(resultId: string) { setResults((current) => { const next = current.filter((item) => item.id !== resultId); if (selectedResultId === resultId) setSelectedResultId(next[0]?.id ?? null); if (next.length === 0 && status === 'succeeded') setStatus('idle'); return next; }); setFeedback('结果已删除。'); }
-  function restoreHistory(item: GenerationHistoryItem) { clearGenerationTimer(); setPromptText(item.request.prompt); setNegativePrompt(item.request.negativePrompt); setReferences(item.request.references.map((ref) => ({ ...ref }))); setConfig({ ...item.request.config }); setCurrentRequest(item.request); setResults(item.results.map((result) => ({ ...result }))); setSelectedResultId(item.results[0]?.id ?? null); setStatus(item.status); setErrorMessage(item.errorMessage ?? ''); setFeedback('已从历史恢复。'); }
+  async function restoreHistory(item: GenerationHistoryItem) { clearGenerationTimer(); setPromptText(item.request.prompt); setNegativePrompt(item.request.negativePrompt); setReferences(item.request.references.map((ref) => ({ ...ref }))); setConfig({ ...item.request.config }); setCurrentRequest(item.request); const restoredResults = await hydrateHistoryResults(item.results); setResults(restoredResults); setSelectedResultId(restoredResults[0]?.id ?? null); setStatus(item.status); setErrorMessage(item.errorMessage ?? ''); setFeedback(restoredResults.some((result, index) => item.results[index]?.localPath && !item.results[index]?.imageUrl && result.imageUrl) ? '已从历史恢复，并加载本地图片。' : '已从历史恢复。'); }
   function deleteHistory(id: string) { persistHistory(history.filter((item) => item.id !== id)); setFeedback('历史记录已删除。'); }
   const generateLabel = useMemo(() => { if (!trimmedPrompt) return '生成图片'; if (status === 'generating') return '正在生成…'; if (status === 'succeeded') return '再次生成'; if (status === 'failed') return '重试生成'; if (status === 'cancelled') return '重新生成'; return `生成 ${config.count} 张图片`; }, [config.count, status, trimmedPrompt]);
   const promptError = !trimmedPrompt && status !== 'idle' ? '生成前需要填写提示词。' : '';
@@ -262,6 +262,14 @@ export function ImageWorkbench() {
 function CompactNumber({ disabled = false, hint, label, max, min, onChange, suffix = '', value }: { disabled?: boolean; hint?: string; label: string; max: number; min: number; onChange: (value: number) => void; suffix?: string; value: number }) { return <div className={`image-studio__field ${disabled ? 'image-studio__field--disabled' : ''}`}><span>{label}</span><div className="image-studio__stepper"><button disabled={disabled || value <= min} onClick={() => onChange(Math.max(min, value - 1))} type="button">-</button><strong>{value}{suffix}</strong><button disabled={disabled || value >= max} onClick={() => onChange(Math.min(max, value + 1))} type="button">+</button></div>{hint && <small>{hint}</small>}</div>; }
 
 
+
+async function hydrateHistoryResults(results: GenerationResult[]): Promise<GenerationResult[]> {
+  return Promise.all(results.map(async (result) => {
+    if (result.imageUrl || !result.localPath) return { ...result };
+    const response = await rendererBridge.readGeneratedImageDataUrl(result.localPath);
+    return response.ok && response.dataUrl ? { ...result, imageUrl: response.dataUrl } : { ...result };
+  }));
+}
 
 function sanitizeHistoryItems(items: unknown): GenerationHistoryItem[] {
   if (!Array.isArray(items)) return [];

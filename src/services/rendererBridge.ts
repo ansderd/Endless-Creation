@@ -32,6 +32,10 @@ export const rendererBridge = {
     return getElectronBridge()?.app.saveImageGenerationHistory(items) ?? Promise.resolve({ ok: true, message: 'web fallback' });
   },
 
+  async readGeneratedImageDataUrl(localPath: string): Promise<{ ok: boolean; message: string; dataUrl?: string }> {
+    return getElectronBridge()?.app.readGeneratedImageDataUrl(localPath) ?? Promise.resolve({ ok: false, message: '当前环境不支持读取本地图片。' });
+  },
+
   async openGeneratedImageLocation(localPath?: string): Promise<{ ok: boolean; message: string }> {
     const electronBridge = getElectronBridge();
     if (!electronBridge) return { ok: false, message: '当前浏览器预览模式无法打开图片位置，请在 Electron 桌面端中重试。' };

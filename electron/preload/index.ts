@@ -7,6 +7,7 @@ const bridge: EndlessCreationBridge = {
     getPlatform: () => ipcRenderer.invoke('app:get-platform'),
     loadImageGenerationHistory: () => ipcRenderer.invoke('app:load-image-generation-history'),
     saveImageGenerationHistory: (items) => ipcRenderer.invoke('app:save-image-generation-history', items),
+    readGeneratedImageDataUrl: (localPath) => ipcRenderer.invoke('app:read-generated-image-data-url', localPath),
     openGeneratedImageLocation: (localPath) => ipcRenderer.invoke('app:open-generated-image-location', localPath),
     selectGeneratedImagesDirectory: (currentPath) => ipcRenderer.invoke('app:select-generated-images-directory', currentPath),
   },

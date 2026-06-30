@@ -173,11 +173,35 @@ async function saveImageGenerationHistory(items: unknown): Promise<{ ok: boolean
   }
 }
 
+
+function getImageMimeType(filePath: string): string | null {
+  const ext = path.extname(filePath).toLowerCase();
+  if (ext === '.png') return 'image/png';
+  if (ext === '.jpg' || ext === '.jpeg') return 'image/jpeg';
+  if (ext === '.webp') return 'image/webp';
+  return null;
+}
+
+async function readGeneratedImageDataUrl(localPath: unknown): Promise<{ ok: boolean; message: string; dataUrl?: string }> {
+  if (typeof localPath !== 'string' || !localPath.trim()) return { ok: false, message: '图片路径缺失。' };
+  const mimeType = getImageMimeType(localPath);
+  if (!mimeType) return { ok: false, message: '仅支持读取 PNG/JPEG/WebP 图片。' };
+  try {
+    const stat = await fs.stat(localPath);
+    if (!stat.isFile()) return { ok: false, message: '图片路径不是文件。' };
+    const buffer = await fs.readFile(localPath);
+    return { ok: true, message: '图片已读取。', dataUrl: `data:${mimeType};base64,${buffer.toString('base64')}` };
+  } catch {
+    return { ok: false, message: '读取本地图片失败。' };
+  }
+}
+
 function registerIpcHandlers(): void {
   ipcMain.handle('app:get-version', () => app.getVersion());
   ipcMain.handle('app:get-platform', () => process.platform);
   ipcMain.handle('app:load-image-generation-history', () => loadImageGenerationHistory());
   ipcMain.handle('app:save-image-generation-history', (_event, items: unknown) => saveImageGenerationHistory(items));
+  ipcMain.handle('app:read-generated-image-data-url', (_event, localPath: unknown) => readGeneratedImageDataUrl(localPath));
   ipcMain.handle('app:open-generated-image-location', async (_event, localPath: unknown): Promise<{ ok: boolean; message: string }> => {
     if (typeof localPath === 'string' && localPath.trim()) {
       shell.showItemInFolder(localPath);
