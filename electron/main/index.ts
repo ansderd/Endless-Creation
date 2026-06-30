@@ -22,6 +22,12 @@ interface ApiConnectionTestResult {
   models?: string[];
 }
 
+interface ApiImageReferenceImage {
+  id: string;
+  name?: string;
+  dataUrl: string;
+}
+
 interface ApiImageGenerationRequest {
   requestId: string;
   baseUrl: string;
@@ -34,6 +40,7 @@ interface ApiImageGenerationRequest {
   count?: number;
   n?: number;
   saveDirectory?: string;
+  referenceImages?: ApiImageReferenceImage[];
 }
 
 interface ApiGeneratedImage {
@@ -283,6 +290,14 @@ async function testOpenAiCompatibleConnection(config: unknown): Promise<ApiConne
   }
 }
 
+function isApiImageReferenceImage(value: unknown): value is ApiImageReferenceImage {
+  if (!value || typeof value !== 'object') return false;
+  const candidate = value as Record<string, unknown>;
+  return typeof candidate.id === 'string'
+    && (candidate.name === undefined || typeof candidate.name === 'string')
+    && typeof candidate.dataUrl === 'string';
+}
+
 function isApiImageGenerationRequest(request: unknown): request is ApiImageGenerationRequest {
   if (!request || typeof request !== 'object') return false;
 
@@ -297,7 +312,8 @@ function isApiImageGenerationRequest(request: unknown): request is ApiImageGener
     && (candidate.saveDirectory === undefined || typeof candidate.saveDirectory === 'string')
     && (candidate.negativePrompt === undefined || typeof candidate.negativePrompt === 'string')
     && (candidate.count === undefined || typeof candidate.count === 'number')
-    && (candidate.n === undefined || typeof candidate.n === 'number');
+    && (candidate.n === undefined || typeof candidate.n === 'number')
+    && (candidate.referenceImages === undefined || (Array.isArray(candidate.referenceImages) && candidate.referenceImages.every(isApiImageReferenceImage)));
 }
 
 async function generateOpenAiCompatibleImage(request: unknown): Promise<ApiImageGenerationResult> {
@@ -314,6 +330,7 @@ async function generateOpenAiCompatibleImage(request: unknown): Promise<ApiImage
   const size = request.size.trim();
   const quality = request.quality.trim();
   const count = normalizeImageCount(request.n ?? request.count);
+  const referenceImages = request.referenceImages ?? [];
 
   if (!requestId) return { ok: false, message: '生图请求 ID 缺失。' };
   if (!baseUrl) return { ok: false, message: '请填写 Base URL。' };
@@ -325,9 +342,12 @@ async function generateOpenAiCompatibleImage(request: unknown): Promise<ApiImage
   if (!count) return { ok: false, message: '图片数量必须大于 0。' };
 
   let generationUrl: URL;
+  let editUrl: URL | null = null;
 
   try {
-    generationUrl = new URL(`${baseUrl.replace(/\/+$/, '')}/images/generations`);
+    const normalizedBaseUrl = baseUrl.replace(/\/+$/, '');
+    generationUrl = new URL(`${normalizedBaseUrl}/images/generations`);
+    if (referenceImages.length) editUrl = new URL(`${normalizedBaseUrl}/images/edits`);
   } catch {
     return { ok: false, message: 'Base URL 格式无效。' };
   }
@@ -342,19 +362,20 @@ async function generateOpenAiCompatibleImage(request: unknown): Promise<ApiImage
   }, 60_000);
 
   try {
-    let activeGenerationUrl = generationUrl;
-    let response = await sendImageGenerationRequest(activeGenerationUrl, apiKey, controller.signal, {
-      model,
-      prompt: buildImagePrompt(prompt, negativePrompt),
-      size,
-      quality,
-      n: count,
-      response_format: 'b64_json',
-    });
-    let parsed = await readImageGenerationResponse(response, apiKey);
+    let response: Response;
+    let parsed: { images: ApiGeneratedImage[]; errorMessage?: string };
 
-    if (shouldRetryWithV1(response)) {
-      activeGenerationUrl = new URL(`${baseUrl.replace(/\/+$/, '')}/v1/images/generations`);
+    if (referenceImages.length && editUrl) {
+      response = await sendImageEditRequest(editUrl, apiKey, controller.signal, {
+        model,
+        prompt: buildImagePrompt(prompt, negativePrompt),
+        size,
+        n: count,
+        response_format: 'b64_json',
+      }, referenceImages);
+      parsed = await readImageGenerationResponse(response, apiKey);
+    } else {
+      let activeGenerationUrl = generationUrl;
       response = await sendImageGenerationRequest(activeGenerationUrl, apiKey, controller.signal, {
         model,
         prompt: buildImagePrompt(prompt, negativePrompt),
@@ -364,17 +385,30 @@ async function generateOpenAiCompatibleImage(request: unknown): Promise<ApiImage
         response_format: 'b64_json',
       });
       parsed = await readImageGenerationResponse(response, apiKey);
-    }
 
-    if (!response.ok && shouldRetryWithoutResponseFormat(parsed.errorMessage)) {
-      response = await sendImageGenerationRequest(activeGenerationUrl, apiKey, controller.signal, {
-        model,
-        prompt: buildImagePrompt(prompt, negativePrompt),
-        size,
-        quality,
-        n: count,
-      });
-      parsed = await readImageGenerationResponse(response, apiKey);
+      if (shouldRetryWithV1(response)) {
+        activeGenerationUrl = new URL(`${baseUrl.replace(/\/+$/, '')}/v1/images/generations`);
+        response = await sendImageGenerationRequest(activeGenerationUrl, apiKey, controller.signal, {
+          model,
+          prompt: buildImagePrompt(prompt, negativePrompt),
+          size,
+          quality,
+          n: count,
+          response_format: 'b64_json',
+        });
+        parsed = await readImageGenerationResponse(response, apiKey);
+      }
+
+      if (!response.ok && shouldRetryWithoutResponseFormat(parsed.errorMessage)) {
+        response = await sendImageGenerationRequest(activeGenerationUrl, apiKey, controller.signal, {
+          model,
+          prompt: buildImagePrompt(prompt, negativePrompt),
+          size,
+          quality,
+          n: count,
+        });
+        parsed = await readImageGenerationResponse(response, apiKey);
+      }
     }
 
     if (!response.ok) {
@@ -435,6 +469,44 @@ function sendImageGenerationRequest(
     body: JSON.stringify(body),
     signal,
   });
+}
+
+function sendImageEditRequest(
+  editUrl: URL,
+  apiKey: string,
+  signal: AbortSignal,
+  fields: Record<string, string | number>,
+  referenceImages: ApiImageReferenceImage[],
+): Promise<Response> {
+  const formData = new FormData();
+  Object.entries(fields).forEach(([key, value]) => formData.append(key, String(value)));
+  referenceImages.forEach((image) => {
+    const parsed = parseDataUrlImage(image.dataUrl);
+    formData.append('image', parsed.blob, safeImageFileName(image));
+  });
+
+  return fetch(editUrl, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      Accept: 'application/json',
+    },
+    body: formData,
+    signal,
+  });
+}
+
+function parseDataUrlImage(dataUrl: string): { mime: string; blob: Blob } {
+  const match = /^data:(image\/[a-zA-Z0-9.+-]+);base64,(.+)$/.exec(dataUrl);
+  if (!match?.[1] || !match[2]) throw new Error('参考图数据格式无效。');
+  const buffer = Buffer.from(match[2], 'base64');
+  if (!buffer.length) throw new Error('参考图数据为空。');
+  return { mime: match[1], blob: new Blob([new Uint8Array(buffer)], { type: match[1] }) };
+}
+
+function safeImageFileName(image: ApiImageReferenceImage): string {
+  const baseName = (image.name || image.id || 'reference').replace(/[\/:*?"<>|]+/g, '-').trim() || 'reference';
+  return /\.[a-z0-9]{2,8}$/i.test(baseName) ? baseName : `${baseName}.png`;
 }
 
 function shouldRetryWithV1(response: Response): boolean {

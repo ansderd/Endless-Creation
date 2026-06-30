@@ -146,6 +146,16 @@ export function ImageWorkbench() {
       setStatus('failed'); setErrorMessage(validationError); setFeedback(''); setHistory((current) => [failedItem, ...current].slice(0, 12)); return;
     }
 
+    let referenceImages: { id: string; name?: string; dataUrl: string }[] | undefined;
+    try {
+      const convertedReferences = await Promise.all(request.references.map(referenceToImagePayload));
+      referenceImages = convertedReferences.length ? convertedReferences : undefined;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : '参考图转换失败，请重新上传后再试。';
+      const failedItem: GenerationHistoryItem = { id: createId('history'), request, status: 'failed', results: [], createdAt: new Date().toISOString(), durationMs: Math.round(performance.now() - startedAt), errorMessage: message };
+      setStatus('failed'); setErrorMessage(message); setFeedback(''); setHistory((current) => [failedItem, ...current].slice(0, 12)); return;
+    }
+
     activeImageRequestIdRef.current = request.id;
     setCurrentRequest(request); setStatus('generating'); setErrorMessage(''); setFeedback('正在调用真实生图 API…');
 
@@ -163,6 +173,7 @@ export function ImageWorkbench() {
         quality: normalizeImageQuality(request.config.quality),
         count: request.config.count,
         saveDirectory: request.config.saveDirectory,
+        referenceImages,
       });
 
       if (generationRunRef.current !== runId) return;
@@ -239,6 +250,29 @@ export function ImageWorkbench() {
 }
 
 function CompactNumber({ disabled = false, hint, label, max, min, onChange, suffix = '', value }: { disabled?: boolean; hint?: string; label: string; max: number; min: number; onChange: (value: number) => void; suffix?: string; value: number }) { return <div className={`image-studio__field ${disabled ? 'image-studio__field--disabled' : ''}`}><span>{label}</span><div className="image-studio__stepper"><button disabled={disabled || value <= min} onClick={() => onChange(Math.max(min, value - 1))} type="button">-</button><strong>{value}{suffix}</strong><button disabled={disabled || value >= max} onClick={() => onChange(Math.min(max, value + 1))} type="button">+</button></div>{hint && <small>{hint}</small>}</div>; }
+
+
+async function referenceToImagePayload(reference: ReferenceImage): Promise<{ id: string; name?: string; dataUrl: string }> {
+  if (!reference.previewUrl) throw new Error(`${reference.name || '参考图'} 缺少可上传的图片数据。`);
+  if (reference.previewUrl.startsWith('data:image/')) return { id: reference.id, name: reference.name, dataUrl: reference.previewUrl };
+  if (!reference.previewUrl.startsWith('blob:')) throw new Error(`${reference.name || '参考图'} 缺少可上传的图片数据。`);
+  try {
+    const response = await fetch(reference.previewUrl);
+    if (!response.ok) throw new Error('fetch failed');
+    return { id: reference.id, name: reference.name, dataUrl: await blobToDataUrl(await response.blob()) };
+  } catch {
+    throw new Error(`${reference.name || '参考图'} 转换失败，请重新上传后再试。`);
+  }
+}
+
+function blobToDataUrl(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => typeof reader.result === 'string' ? resolve(reader.result) : reject(new Error('invalid data url'));
+    reader.onerror = () => reject(reader.error ?? new Error('read failed'));
+    reader.readAsDataURL(blob);
+  });
+}
 
 function ImagePromptEditor({ insertSignal, mentionedReferences, onChange, onMentionedReferenceIdsChange, references, value }: { value: string; onChange: (value: string) => void; onMentionedReferenceIdsChange: (ids: string[]) => void; references: ReferenceImage[]; mentionedReferences: ReferenceImage[]; insertSignal: PromptInsertSignal | null }) {
   const editorRef = useRef<HTMLDivElement | null>(null);

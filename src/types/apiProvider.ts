@@ -31,6 +31,7 @@ export interface ApiImageGenerationRequest {
   count?: number;
   n?: number;
   saveDirectory?: string;
+  referenceImages?: { id: string; name?: string; dataUrl: string }[];
 }
 
 export interface ApiGeneratedImage {
