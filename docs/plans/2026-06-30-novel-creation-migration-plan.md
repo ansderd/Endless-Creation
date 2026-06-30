@@ -225,6 +225,44 @@ interface Chapter {
 
 保存要求：写入使用串行队列，避免快速编辑、切章、退出时丢数据。
 
+第一阶段架构边界：
+
+```ts
+novel.listNovels(): Promise<{ ok: boolean; novels: NovelSummary[]; message?: string }>;
+novel.createNovel(input: { title: string; summary?: string; note?: string }): Promise<{ ok: boolean; novel?: Novel; message: string }>;
+novel.loadNovel(id: string): Promise<{ ok: boolean; novel?: Novel; message: string }>;
+novel.saveNovel(novel: Novel): Promise<{ ok: boolean; novel?: Novel; message: string }>;
+novel.deleteNovel(id: string): Promise<{ ok: boolean; message: string }>;
+```
+
+不做章节级 IPC。章节增删改在 renderer 内更新整本 `Novel`，再调用 `saveNovel(novel)`。
+
+存储结构：
+
+```text
+userData/
+  novels/
+    {novelId}/
+      novel.json
+```
+
+`listNovels()` 直接扫描 `novels/*/novel.json` 生成列表摘要；第一阶段不维护 `index.json`。不要拆每章一个文件。
+
+`NovelSummary` 仅供列表使用：
+
+```ts
+type NovelSummary = Pick<Novel, "id" | "title" | "summary" | "createdAt" | "updatedAt"> & {
+  chapterCount: number;
+  wordCount: number;
+};
+```
+
+写入边界：main 侧按 `novelId` 串行化 `saveNovel`，写入 `novel.json.tmp` 后 rename 为 `novel.json`。`saveNovel(currentNovel)` 即第一阶段最小 flush，不单独暴露 `flushNovel`。
+
+错误处理：缺失 `novel.json` 时列表跳过、加载返回失败；JSON 损坏不崩溃，加载返回“小说文件损坏”；删除失败返回失败，UI 保持列表项；缺失字符串字段归一为空字符串，缺失 `chapters` 归一为空数组。
+
+Web fallback：无 Electron bridge 时用 `localStorage` 存 `endless-creation.novels`，仅支持 `npm run dev` 预览，不作为正式存储。
+
 ## 第一阶段强约束
 
 第一阶段只允许做：
