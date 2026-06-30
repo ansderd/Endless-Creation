@@ -415,3 +415,92 @@ Endless Creation 后续生成章节大纲时，应参考这种轻量解析方式
 
 - 本地知识库 / 资产库参考
 
+## 第三参考源：novelWriter 核对记录
+
+参考源：`https://github.com/vkbo/novelWriter`
+
+核对提交：`d87b1be`
+
+结论：novelWriter 不是 AI 生成器，而是专业小说编辑器。它只作为小说编辑体验、项目组织、文稿导出方向的参考，不复制代码。
+
+许可证注意：novelWriter 使用 GPLv3，Endless Creation 只能参考产品设计和概念，不能直接迁移源码。
+
+### 可参考能力
+
+#### 小说项目树结构
+
+novelWriter 将小说项目拆成不同根目录类型：
+
+- Novel：正文
+- Plot：剧情线
+- Characters：角色
+- Locations：地点
+- Timeline：时间线
+- Objects：物品
+- Entities：组织或实体
+- Archive：归档
+- Trash：回收站
+
+Endless Creation 后续可参考该结构设计「小说创作」左侧项目树，但第一阶段仍只做最小小说列表和章节编辑。
+
+建议阶段：第三阶段之后。
+
+#### 章节 / 场景层级
+
+novelWriter 用标题层级表达小说结构：
+
+- `#`：分部
+- `##`：章节
+- `###`：场景
+- `####`：小节
+
+Endless Creation 后续可以从单纯章节列表升级为分部、章节、场景、小节结构。
+
+建议阶段：第三阶段之后。
+
+#### 标签与引用系统
+
+novelWriter 支持 `@tag` 和引用系统，用于把角色、地点、物品、剧情线与正文片段关联。
+
+Endless Creation 后续应优先与已有资产库打通，把角色、地点、物品、设定作为可引用资产。
+
+建议阶段：第五阶段。
+
+#### 纯文本 / 多文件存储思想
+
+novelWriter 强调人类可读文本、多文件存储、易备份、易同步。
+
+Endless Creation 第一阶段可以继续使用 JSON；后续若进入专业写作模式，可考虑增加 Markdown/TXT 导出或 sidecar 文本文件，但不提前复杂化存储。
+
+建议阶段：第三阶段之后。
+
+#### 文稿构建与导出
+
+novelWriter 支持从多个章节和场景构建完整 manuscript。
+
+Endless Creation 后续可支持导出：
+
+- Markdown
+- TXT
+- DOCX
+
+建议阶段：第五阶段。
+
+#### 写作统计
+
+novelWriter 有字数统计、会话统计、写作进度记录。
+
+Endless Creation 可在章节编辑稳定后加入基础字数和进度统计。
+
+建议阶段：第三或第四阶段。
+
+### 不迁移项
+
+以下内容不进入 Endless Creation 路线：
+
+- Python 运行时
+- PyQt6 UI
+- GPLv3 源码
+- novelWriter 完整项目格式
+- novelWriter 主题和编辑器实现
+
