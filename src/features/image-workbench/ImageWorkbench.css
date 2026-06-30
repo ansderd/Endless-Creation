@@ -122,14 +122,17 @@
 .image-history { @apply grid gap-3 overflow-y-auto pr-1; }
 .image-history__empty { @apply grid gap-1 rounded-2xl bg-gray-50 p-8 text-center text-sm font-semibold text-slate-400; }
 .image-history__empty strong { @apply text-base font-black text-slate-700; }
-.image-history__item { @apply grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-3 rounded-2xl bg-gray-50 p-3; }
+.image-history__item { @apply grid cursor-pointer grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-3 rounded-2xl bg-gray-50 p-3 transition hover:bg-blue-50/60; }
 .image-history__restore { @apply grid min-w-0 grid-cols-[64px_minmax(0,1fr)] items-center gap-3 text-left; }
 .image-history__thumb { @apply grid h-16 w-16 shrink-0 place-items-center overflow-hidden rounded-xl bg-blue-50 text-xs font-black text-blue-300; }
 .image-history__thumb img { @apply h-full w-full object-cover; }
 .image-history__text { @apply grid min-w-0 gap-1; }
 .image-history__text strong { @apply line-clamp-2 text-sm font-black text-slate-800; }
 .image-history__text span { @apply truncate text-xs text-slate-400; }
-.image-history__item>button:last-child { @apply text-xs font-bold text-slate-400 hover:text-red-500; }
+.image-history__actions { @apply flex items-center gap-2; }
+.image-history__actions button { @apply rounded-full px-3 py-1.5 text-xs font-black transition; }
+.image-history__actions button:first-child { @apply bg-blue-50 text-blue-600 hover:bg-blue-100; }
+.image-history__actions button:last-child { @apply bg-white text-slate-400 hover:text-red-500; }
 .image-history__badge { @apply rounded-full bg-green-50 px-2.5 py-1 text-xs font-black text-green-600; }
 .image-history__badge--failed { @apply bg-red-50 text-red-600; }
 .image-history__badge--cancelled { @apply bg-amber-50 text-amber-600; }
