@@ -504,3 +504,175 @@ Endless Creation 可在章节编辑稳定后加入基础字数和进度统计。
 - novelWriter 完整项目格式
 - novelWriter 主题和编辑器实现
 
+## 扩展参考池核对记录
+
+以下仓库作为扩展参考池，只登记可借鉴的产品能力、流程和架构思路，不直接迁移源码。
+
+### RhythmicWave/NovelForge
+
+参考源：`https://github.com/RhythmicWave/NovelForge`
+
+核对提交：`ca7ca58`
+
+许可证：AGPL-3.0，不能直接复制源码。
+
+可参考点：
+
+- Schema-first 卡片创作
+- Prompt Workshop
+- `@DSL` 上下文注入
+- 工作流 Studio
+- 工作流 Agent
+- 灵感工作台
+- 知识图谱一致性
+
+建议阶段：第四阶段之后，作为高级工作流和上下文注入参考。
+
+### ExplosiveCoderflome/AI-Novel-Writing-Assistant
+
+参考源：`https://github.com/ExplosiveCoderflome/AI-Novel-Writing-Assistant`
+
+核对提交：`69de240`
+
+许可证：AGPL-3.0，不能直接复制源码。
+
+可参考点：
+
+- 自动导演开书
+- 整本书生产主链
+- 检查点恢复
+- 自动审核与修复
+- 角色资源账本
+- Creative Hub
+- Agent Runtime
+- 漫画、短剧等衍生工坊
+
+建议阶段：第五阶段之后，作为自动化生产链参考。
+
+### leenbj/novel-creator-skill
+
+参考源：`https://github.com/leenbj/novel-creator-skill`
+
+核对提交：`a327428`
+
+可参考点：
+
+- 长篇创作 Skill 化流程
+- 每章五步质量门禁
+- RAG 剧情检索
+- 知识图谱
+- 大纲锚点
+- 跨 Agent 审稿
+- 去 AI 味润色规则
+- 事件矩阵与冷却
+
+建议阶段：第四阶段之后，作为质量门禁和协作流程参考。
+
+### Narcooo/inkos
+
+参考源：`https://github.com/Narcooo/inkos`
+
+核对提交：`d0fc38a`
+
+许可证：AGPL-3.0，不能直接复制源码。
+
+可参考点：
+
+- 长篇、短篇、剧本、同人、续写、互动世界统一入口
+- Studio / TUI / CLI 多入口共享执行内核
+- protected / compressible 上下文分层
+- 开放世界状态维护
+- 封面生成服务配置
+- 多服务模型配置
+
+建议阶段：第五阶段之后，作为多创作形态和互动世界参考。
+
+### Deng-m1/MaliangAINovalWriter
+
+参考源：`https://github.com/Deng-m1/MaliangAINovalWriter`
+
+核对提交：`f500d01`
+
+许可证：Apache-2.0。
+
+可参考点：
+
+- 作品 → 卷 → 章节 → 场景四级结构
+- 沉浸式编辑区 AI 工具栏
+- 大纲与聊天并行
+- 结构化设定树
+- 设定历史快照
+- 提示词和预设管理
+- AI 调用可观测性
+- Token 消耗统计
+- 多格式导入
+
+建议阶段：第三阶段之后，作为编辑器体验、设定树和统计面板参考。
+
+### inliver233/Ai-Novel
+
+参考源：`https://github.com/inliver233/Ai-Novel`
+
+核对提交：`28d7535`
+
+许可证：MIT。
+
+可参考点：
+
+- 世界书
+- 角色卡
+- 术语表
+- Story memories
+- Open loops 管理
+- 结构化记忆变更集
+- 项目 Bundle 导入导出
+- Markdown 导出
+- Prompt blocks
+- LLM preset 和用户 profile
+
+建议阶段：第四阶段之后，作为记忆系统和导入导出参考。
+
+### zqaini002/Novel_Wonderful-generation
+
+参考源：`https://github.com/zqaini002/Novel_Wonderful-generation`
+
+核对提交：`87d6c65`
+
+许可证：README 标注 MIT，但未在轻量核对中确认独立许可证文件。
+
+可参考点：
+
+- 小说上传
+- 章节识别与提取
+- 小说处理状态跟踪
+- 小说摘要与标签
+- 内容理解和筛选辅助
+
+建议阶段：第三阶段之后，作为小说导入和解析参考。
+
+### xindoo/ai-novel-lab
+
+参考源：`https://github.com/xindoo/ai-novel-lab`
+
+核对提交：`d2974b6`
+
+许可证：MIT。
+
+可参考点：
+
+- 大纲驱动写作
+- 章节文件按编号落盘
+- 进度追踪表
+- 字数统计脚本
+- 章节网站阅读端
+- 完整长篇创作复盘
+
+建议阶段：第三阶段之后，作为文件组织、进度追踪和发布阅读端参考。
+
+### 扩展参考池使用原则
+
+- 第一阶段仍不变：小说创作页 + 本地小说项目 CRUD + 章节编辑器。
+- AGPL/GPL 仓库只参考产品设计和流程，禁止复制源码。
+- MIT/Apache 仓库也优先参考思路，不直接搬技术栈。
+- 所有参考点进入对应阶段，不允许提前塞进 MVP。
+
