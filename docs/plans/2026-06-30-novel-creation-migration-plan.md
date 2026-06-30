@@ -48,8 +48,10 @@ src/features/novel-creation
 本地数据建议放在：
 
 ```text
-userData/projects/default/novels/
+userData/novels/
 ```
+
+产品归属：小说创作是顶层独立模块，不依赖项目管理。每本小说是独立本地创作对象；后续如需与项目、资产库、画布联动，通过引用关系接入，不改变第一阶段存储归属。
 
 ## 分阶段路线
 
@@ -64,17 +66,20 @@ userData/projects/default/novels/
 - 编辑小说基础信息
 - 删除小说
 - 小说详情页
-- 世界观设定
-- 角色设定
-- 章节大纲
 - 章节正文编辑器
 - 本地保存与重启恢复
+- 保存状态：已保存 / 未保存 / 保存失败
+- 删除确认：删除小说、删除章节都要二次确认
+- 空状态：无小说、无章节时有明确引导
+- 字数统计：当前章节字数和全书总字数，前端计算即可
 
 验收标准：
 
 - 重启应用后小说数据不丢失
 - 可以新增、编辑、删除小说
 - 可以新增、编辑、删除章节
+- 快速编辑并切换章节后立刻重启，不丢内容
+- 本地存储损坏时应用不崩溃，降级为空列表或错误提示
 - 页面风格适配 Endless Creation，不照搬 NovelForge
 - 不影响现有生图工作台、资产管理、API 配置
 
@@ -85,7 +90,7 @@ userData/projects/default/novels/
 链路：
 
 ```text
-灵感输入 → 故事蓝图 → 章节大纲 → 章节正文
+文本生成 Bridge + 复用模型偏好 → 最小端到端 AI 调用 → Prompt Registry → 第一个小说 AI 场景
 ```
 
 需要新增最小文本生成桥接：
@@ -105,9 +110,11 @@ Electron Main 调用 OpenAI-compatible：
 可参考迁移的 Prompt：
 
 - `backend/prompts/concept.md`
-- `backend/prompts/screenwriting.md`
 - `backend/prompts/outline_generation.md`
 - `backend/prompts/writing.md`
+- `backend/prompts/screenwriting.md`
+
+第二阶段第一个 AI 闭环建议只做“根据章节提示生成章节草稿”，不一次性实现完整“灵感 → 蓝图 → 大纲 → 正文”链路。
 
 ### 第三阶段：多版本章节生成
 
@@ -132,6 +139,8 @@ interface Chapter {
   versions: ChapterVersion[];
 }
 ```
+
+注意：第一阶段不得预埋 `versions`、`outline` 等字段；该结构从第三阶段开始引入。
 
 ### 第四阶段：评估与优化
 
@@ -190,12 +199,38 @@ interface Chapter {
 4. 前端工程师：实现第一阶段。
 5. QA 工程师：只复验第一阶段。
 
+第一阶段最小数据结构：
+
+```ts
+interface Novel {
+  id: string;
+  title: string;
+  summary: string;
+  note: string;
+  chapters: Chapter[];
+  version: 1;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface Chapter {
+  id: string;
+  title: string;
+  content: string;
+  order: number;
+  createdAt: string;
+  updatedAt: string;
+}
+```
+
+保存要求：写入使用串行队列，避免快速编辑、切章、退出时丢数据。
+
 ## 第一阶段强约束
 
 第一阶段只允许做：
 
 ```text
-小说创作页 + 本地小说项目 CRUD + 章节编辑器
+小说创作页 + 本地小说 CRUD + 章节编辑器 + 保存恢复 + 字数统计
 ```
 
 不得提前实现：
@@ -207,6 +242,12 @@ interface Chapter {
 - 云同步
 - Prompt 管理后台
 - 复杂版本系统
+- 世界观结构化设定
+- 角色卡系统
+- 章节大纲结构化管理
+- 小说导入
+- 封面上传 / 生成
+- 资产库联动
 
 ## 后续防跑偏检查
 
@@ -222,7 +263,7 @@ interface Chapter {
 
 NovelForge 后台包含大量可编辑提示词。Endless Creation 前期不迁移后台管理，但不能跳过提示词体系。
 
-第二阶段接入 AI 文本生成时，必须先实现本地内置 Prompt Registry：
+第二阶段接入 AI 文本生成时，必须先打通文本生成 Bridge 并复用现有模型偏好，再实现本地内置 Prompt Registry：
 
 ```text
 src/features/novel-creation/promptRegistry.ts
@@ -230,12 +271,15 @@ src/features/novel-creation/promptRegistry.ts
 
 或等价的本地模块。
 
-优先内置以下 Prompt：
+第一版优先内置以下 Prompt：
 
 - `concept`
-- `screenwriting`
 - `outline_generation`
 - `writing`
+
+可选补充：
+
+- `screenwriting`
 - `evaluation`
 - `extraction`
 - `chapter_plan`
@@ -259,7 +303,7 @@ src/features/novel-creation/promptRegistry.ts
 设置页 → 小说创作 → 提示词管理
 ```
 
-强约束：不得因为没有后台提示词管理而跳过 Prompt Registry，也不得提前迁移 NovelForge 管理后台。
+强约束：不得因为没有后台提示词管理而跳过 Prompt Registry，也不得在文本生成 Bridge 打通前堆不可验证的 Prompt 模板；不得提前迁移 NovelForge 管理后台。
 
 ## GitHub 最新仓库核对记录
 
@@ -399,7 +443,7 @@ Endless Creation 后续生成章节大纲时，应参考这种轻量解析方式
 第一阶段不变：
 
 ```text
-小说创作页 + 本地小说项目 CRUD + 章节编辑器
+小说创作页 + 本地小说 CRUD + 章节编辑器 + 保存恢复 + 字数统计
 ```
 
 第二阶段之后补充：
@@ -671,7 +715,7 @@ Endless Creation 可在章节编辑稳定后加入基础字数和进度统计。
 
 ### 扩展参考池使用原则
 
-- 第一阶段仍不变：小说创作页 + 本地小说项目 CRUD + 章节编辑器。
+- 第一阶段仍不变：小说创作页 + 本地小说 CRUD + 章节编辑器 + 保存恢复 + 字数统计。
 - AGPL/GPL 仓库只参考产品设计和流程，禁止复制源码。
 - MIT/Apache 仓库也优先参考思路，不直接搬技术栈。
 - 所有参考点进入对应阶段，不允许提前塞进 MVP。
