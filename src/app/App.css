@@ -74,10 +74,12 @@
   box-shadow: 0 0 18px rgba(91, 140, 255, 0.16);
 }
 
-.canvasflow-brand__mark svg {
+.canvasflow-brand__mark img {
   width: 30px;
   height: 30px;
-  stroke-width: 1.9;
+  display: block;
+  border-radius: 8px;
+  object-fit: cover;
 }
 
 .app-shell[data-theme='light'] .canvasflow-brand__mark {

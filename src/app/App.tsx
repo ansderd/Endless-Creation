@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { ComponentType, SVGProps } from 'react';
 import type { ThemeMode } from '../types/workspace';
 import { rendererBridge } from '../services/rendererBridge';
+import appLogoUrl from '../assets/endless-creation-logo.png';
 import { AssetManagement } from '../features/asset-management';
 import { ImageWorkbench } from '../features/image-workbench';
 import { NovelCreation } from '../features/novel-creation';
@@ -9,7 +10,6 @@ import { ProjectManagement } from '../features/project-management';
 import { CanvasWorkbench } from '../features/canvas-workbench';
 import { SettingsPage } from '../features/settings';
 import {
-  AddSquareIcon,
   BillingIcon,
   ChevronDownIcon,
   CollapseIcon,
@@ -92,7 +92,7 @@ export function App() {
       >
         <header className="canvasflow-brand">
           <span className="canvasflow-brand__mark" aria-hidden="true">
-            <AddSquareIcon />
+            <img src={appLogoUrl} alt="" />
           </span>
           <span className="canvasflow-brand__name" aria-label="Endless Creation">
             <span>Endless</span>
