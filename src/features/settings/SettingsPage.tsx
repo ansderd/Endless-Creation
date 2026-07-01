@@ -754,7 +754,7 @@ export function SettingsPage({ theme, onThemeChange, onClose }: SettingsPageProp
                         <h2>模型偏好</h2>
                         <p>默认模型可从所有渠道已拉取的模型中选择，也可以手动输入。</p>
                       </div>
-                      <button className="settings-page__primary" type="button" onClick={saveModelPreferences}>{'\u7acb\u5373\u4fdd\u5b58\u4e00\u6b21'}</button>
+                      <button className="settings-page__primary" type="button" onClick={saveModelPreferences}>{'\u4fdd\u5b58'}</button>
                     </div>
                     <article className="settings-card">
                       <div className="settings-model-card-intro">
