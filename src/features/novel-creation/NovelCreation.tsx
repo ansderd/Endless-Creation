@@ -8,6 +8,7 @@ import './NovelCreation.css';
 type SaveStatus = 'saved' | 'dirty' | 'saving' | 'failed';
 type TextGenerationStatus = 'idle' | 'generating' | 'failed';
 type AiDraftAction = 'continue' | 'polish' | 'rewrite';
+type AiDraftSource = { type: 'insert' } | { type: 'chapter'; chapterId: string } | { type: 'selection'; chapterId: string; start: number; end: number };
 type NovelForm = { title: string; summary: string; note: string };
 interface ModelPreferences { textModel?: string; textModels?: string[]; }
 interface ApiProviderChannel { id: string; name?: string; baseUrl?: string; apiKey?: string; apiFormat?: string; enabled?: boolean; models?: string[]; }
@@ -32,6 +33,7 @@ export function NovelCreation() {
   const [textGenerationError, setTextGenerationError] = useState('');
   const [aiDraft, setAiDraft] = useState('');
   const [aiDraftAction, setAiDraftAction] = useState<AiDraftAction>('continue');
+  const [aiDraftSource, setAiDraftSource] = useState<AiDraftSource>({ type: 'insert' });
   const chapterTitleRef = useRef<HTMLInputElement | null>(null);
   const editorRef = useRef<HTMLTextAreaElement | null>(null);
   const revisionRef = useRef(0);
@@ -238,7 +240,9 @@ export function NovelCreation() {
       return;
     }
 
-    const editText = getSelectedChapterText() || activeChapter.content;
+    const selection = getChapterSelection();
+    const aiSource: AiDraftSource = action === 'continue' ? { type: 'insert' } : selection ? { type: 'selection', chapterId: activeChapter.id, start: selection.start, end: selection.end } : { type: 'chapter', chapterId: activeChapter.id };
+    const editText = selection?.text || activeChapter.content;
     if (action !== 'continue' && !editText.trim()) {
       setTextGenerationError('\u8bf7\u5148\u8f93\u5165\u6b63\u6587\u3002');
       return;
@@ -252,6 +256,7 @@ export function NovelCreation() {
     setTextGenerationError('');
     setAiDraft('');
     setAiDraftAction(action);
+    setAiDraftSource(aiSource);
 
     const messages = action === 'polish'
       ? buildPolishChapterPrompt(currentNovel, activeChapter, editText)
@@ -282,12 +287,12 @@ export function NovelCreation() {
     setAiDraft(result.text);
   }
 
-  function getSelectedChapterText() {
+  function getChapterSelection() {
     const target = editorRef.current;
-    if (!target || !activeChapter) return '';
+    if (!target || !activeChapter) return null;
     const start = target.selectionStart;
     const end = target.selectionEnd;
-    return end > start ? activeChapter.content.slice(start, end) : '';
+    return end > start ? { start, end, text: activeChapter.content.slice(start, end) } : null;
   }
 
   function cancelTextGeneration() {
@@ -319,6 +324,26 @@ export function NovelCreation() {
       const nextCursor = cursor + inserted.length;
       target?.setSelectionRange(nextCursor, nextCursor);
     }, 0);
+  }
+
+  function replaceAiDraftSource() {
+    if (!activeChapter || !aiDraft || aiDraftSource.type === 'insert') return;
+    if (aiDraftSource.chapterId !== activeChapter.id) {
+      setTextGenerationError('\u539f\u6587\u8303\u56f4\u5df2\u53d8\u5316\uff0c\u8bf7\u91cd\u65b0\u9009\u62e9\u540e\u751f\u6210\u3002');
+      return;
+    }
+    if (aiDraftSource.type === 'chapter') {
+      updateChapter({ content: aiDraft });
+      setAiDraft('');
+      return;
+    }
+    const content = activeChapter.content;
+    if (aiDraftSource.end > content.length) {
+      setTextGenerationError('\u539f\u6587\u8303\u56f4\u5df2\u53d8\u5316\uff0c\u8bf7\u91cd\u65b0\u9009\u62e9\u540e\u751f\u6210\u3002');
+      return;
+    }
+    updateChapter({ content: `${content.slice(0, aiDraftSource.start)}${aiDraft}${content.slice(aiDraftSource.end)}` });
+    setAiDraft('');
   }
 
   return (
@@ -363,7 +388,7 @@ export function NovelCreation() {
               <div className="editor-stats"><span>{saveStatusLabel(saveStatus)}</span><span>{'\u5f53\u524d\u7ae0'} {currentChapterWords} {'\u5b57'}</span><span>{'\u5168\u4e66'} {totalWords} {'\u5b57'}</span><span>{formatTime(activeChapter.updatedAt)}</span><button disabled={textGenerationStatus === 'generating'} onClick={() => void generateChapterDraft('continue')} type="button">{textGenerationStatus === 'generating' ? '\u751f\u6210\u4e2d' : 'AI \u7eed\u5199'}</button><button disabled={textGenerationStatus === 'generating'} onClick={() => void generateChapterDraft('polish')} type="button">{'AI \u6da6\u8272'}</button><button disabled={textGenerationStatus === 'generating'} onClick={() => void generateChapterDraft('rewrite')} type="button">{'AI \u6539\u5199'}</button>{textGenerationStatus === 'generating' && <button onClick={cancelTextGeneration} type="button">{'\u53d6\u6d88'}</button>}{saveStatus === 'failed' && <button onClick={() => void saveCurrentNovel()} type="button">{'\u91cd\u8bd5'}</button>}</div>
             </header>
             <textarea ref={editorRef} value={activeChapter.content} onChange={(event) => updateChapter({ content: event.target.value })} placeholder="开始写正文…" />
-            {(aiDraft || textGenerationError) && <div className="novel-ai-draft">{textGenerationError ? <p>{textGenerationError}</p> : <><strong>{aiDraftTitle(aiDraftAction)}</strong><p>{aiDraft}</p><div><button onClick={insertAiDraft} type="button">插入正文</button><button onClick={() => void copyAiDraft()} type="button">复制</button><button onClick={() => setAiDraft('')} type="button">放弃</button></div></>}</div>}
+            {(aiDraft || textGenerationError) && <div className="novel-ai-draft">{textGenerationError ? <p>{textGenerationError}</p> : <><strong>{aiDraftTitle(aiDraftAction)}</strong><p>{aiDraft}</p><div>{aiDraftAction !== 'continue' && <button onClick={replaceAiDraftSource} type="button">{'\u66ff\u6362\u539f\u6587'}</button>}<button onClick={insertAiDraft} type="button">{'\u63d2\u5165\u6b63\u6587'}</button><button onClick={() => void copyAiDraft()} type="button">{'\u590d\u5236'}</button><button onClick={() => setAiDraft('')} type="button">{'\u653e\u5f03'}</button></div></>}</div>}
             <button className="chapter-delete" onClick={() => deleteChapter(activeChapter.id)} type="button">删除章节</button>
           </>
         ) : currentNovel ? <EmptyState title="无章节" text="在中间栏新建章节后开始写作。" /> : <EmptyState title="小说工作台" text="本地保存，选择小说后进入章节编辑。" />}
