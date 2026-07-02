@@ -730,12 +730,21 @@
 }
 
 .canvasflow-sidebar--collapsed {
+  position: relative;
   overflow: visible;
   z-index: 30;
 }
 
 .canvasflow-sidebar--collapsed .canvasflow-footer {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
   overflow: visible;
+}
+
+.canvasflow-sidebar--collapsed .canvasflow-nav {
+  padding-bottom: 170px;
 }
 
 .canvasflow-sidebar--collapsed .canvasflow-user-menu {
