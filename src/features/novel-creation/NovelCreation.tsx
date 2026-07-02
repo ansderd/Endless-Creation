@@ -8,7 +8,7 @@ import './NovelCreation.css';
 type SaveStatus = 'saved' | 'dirty' | 'saving' | 'failed';
 type TextGenerationStatus = 'idle' | 'generating' | 'failed';
 type AiDraftAction = 'continue' | 'polish' | 'rewrite';
-type AiDraftSource = { type: 'insert' } | { type: 'chapter'; chapterId: string } | { type: 'selection'; chapterId: string; start: number; end: number };
+type AiDraftSource = { type: 'insert' } | { type: 'chapter'; chapterId: string } | { type: 'selection'; chapterId: string; start: number; end: number; text: string };
 type NovelForm = { title: string; summary: string; note: string };
 interface ModelPreferences { textModel?: string; textModels?: string[]; }
 interface ApiProviderChannel { id: string; name?: string; baseUrl?: string; apiKey?: string; apiFormat?: string; enabled?: boolean; models?: string[]; }
@@ -87,21 +87,31 @@ export function NovelCreation() {
   }, [currentNovel, saveStatus]);
 
   useEffect(() => {
-    function flushLatestNovel() {
+    async function flushLatestNovel() {
       const latestNovel = latestNovelRef.current;
       if (!latestNovel || latestSaveStatusRef.current === 'saved') return;
-      void novelService.saveNovel(latestNovel);
+      const result = await novelService.saveNovel(latestNovel);
+      if (result.ok) latestSaveStatusRef.current = 'saved';
+    }
+
+    function flushWithoutWaiting() {
+      void flushLatestNovel();
     }
 
     function flushOnVisibilityChange() {
-      if (document.visibilityState === 'hidden') flushLatestNovel();
+      if (document.visibilityState === 'hidden') flushWithoutWaiting();
     }
 
-    window.addEventListener('beforeunload', flushLatestNovel);
+    const removeCloseFlush = rendererBridge.onNovelFlushBeforeClose?.(async () => {
+      await flushLatestNovel();
+    });
+
+    window.addEventListener('beforeunload', flushWithoutWaiting);
     document.addEventListener('visibilitychange', flushOnVisibilityChange);
     return () => {
-      flushLatestNovel();
-      window.removeEventListener('beforeunload', flushLatestNovel);
+      flushWithoutWaiting();
+      removeCloseFlush?.();
+      window.removeEventListener('beforeunload', flushWithoutWaiting);
       document.removeEventListener('visibilitychange', flushOnVisibilityChange);
     };
   }, []);
@@ -241,7 +251,7 @@ export function NovelCreation() {
     }
 
     const selection = getChapterSelection();
-    const aiSource: AiDraftSource = action === 'continue' ? { type: 'insert' } : selection ? { type: 'selection', chapterId: activeChapter.id, start: selection.start, end: selection.end } : { type: 'chapter', chapterId: activeChapter.id };
+    const aiSource: AiDraftSource = action === 'continue' ? { type: 'insert' } : selection ? { type: 'selection', chapterId: activeChapter.id, start: selection.start, end: selection.end, text: selection.text } : { type: 'chapter', chapterId: activeChapter.id };
     const editText = selection?.text || activeChapter.content;
     if (action !== 'continue' && !editText.trim()) {
       setTextGenerationError('\u8bf7\u5148\u8f93\u5165\u6b63\u6587\u3002');
@@ -338,7 +348,7 @@ export function NovelCreation() {
       return;
     }
     const content = activeChapter.content;
-    if (aiDraftSource.end > content.length) {
+    if (aiDraftSource.end > content.length || content.slice(aiDraftSource.start, aiDraftSource.end) !== aiDraftSource.text) {
       setTextGenerationError('\u539f\u6587\u8303\u56f4\u5df2\u53d8\u5316\uff0c\u8bf7\u91cd\u65b0\u9009\u62e9\u540e\u751f\u6210\u3002');
       return;
     }

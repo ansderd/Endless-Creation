@@ -37,6 +37,16 @@ const bridge: EndlessCreationBridge = {
     loadNovel: (id) => ipcRenderer.invoke('novel:load-novel', id),
     saveNovel: (novel) => ipcRenderer.invoke('novel:save-novel', novel),
     deleteNovel: (id) => ipcRenderer.invoke('novel:delete-novel', id),
+    onFlushBeforeClose: (callback) => {
+      const handler = () => {
+        void Promise.resolve(callback()).finally(() => {
+          void ipcRenderer.invoke('novel:flush-before-close-done');
+        });
+      };
+      ipcRenderer.on('novel:flush-before-close', handler);
+      return () => ipcRenderer.removeListener('novel:flush-before-close', handler);
+    },
+    finishFlushBeforeClose: () => ipcRenderer.invoke('novel:flush-before-close-done'),
   },
 };
 

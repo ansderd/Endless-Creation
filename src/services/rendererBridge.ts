@@ -250,6 +250,15 @@ export const rendererBridge = {
     return { ok: true, message: 'web fallback', novel };
   },
 
+
+  onNovelFlushBeforeClose(callback: () => Promise<void> | void): (() => void) | undefined {
+    return getElectronBridge()?.novel.onFlushBeforeClose?.(callback);
+  },
+
+  async finishNovelFlushBeforeClose(): Promise<void> {
+    await getElectronBridge()?.novel.finishFlushBeforeClose?.();
+  },
+
   async deleteNovel(id: string): Promise<{ ok: boolean; message: string }> {
     const electronBridge = getElectronBridge();
     if (electronBridge) return electronBridge.novel.deleteNovel(id);

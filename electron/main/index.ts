@@ -7,6 +7,8 @@ import path from 'node:path';
 const DEV_SERVER_URL = process.env.VITE_DEV_SERVER_URL;
 app.setName('Endless Creation');
 let mainWindow: BrowserWindow | null = null;
+let isClosingAfterNovelFlush = false;
+let novelFlushCloseTimer: NodeJS.Timeout | null = null;
 const imageGenerationControllers = new Map<string, AbortController>();
 const timedOutImageGenerationRequests = new Set<string>();
 const textGenerationControllers = new Map<string, AbortController>();
@@ -61,11 +63,6 @@ interface ApiImageGenerationResult {
   status?: number;
   message: string;
   images?: ApiGeneratedImage[];
-}
-
-interface ApiImageGenerationCancelResult {
-  ok: boolean;
-  message: string;
 }
 
 interface ApiTextGenerationRequest {
@@ -137,7 +134,20 @@ function createMainWindow(): void {
     void mainWindow.loadFile(path.join(__dirname, '../../dist/index.html'));
   }
 
+  mainWindow.on('close', (event) => {
+    if (isClosingAfterNovelFlush) return;
+    event.preventDefault();
+    const targetWindow = mainWindow;
+    if (!targetWindow || targetWindow.isDestroyed()) return;
+    targetWindow.webContents.send('novel:flush-before-close');
+    // ponytail: close after timeout if no novel editor is mounted to acknowledge.
+    novelFlushCloseTimer ??= setTimeout(() => closeAfterNovelFlush(targetWindow), 2500);
+  });
+
   mainWindow.on('closed', () => {
+    if (novelFlushCloseTimer) clearTimeout(novelFlushCloseTimer);
+    novelFlushCloseTimer = null;
+    isClosingAfterNovelFlush = false;
     mainWindow = null;
   });
 }
@@ -539,6 +549,14 @@ async function deleteNovel(id: unknown): Promise<{ ok: boolean; message: string 
   }
 }
 
+function closeAfterNovelFlush(targetWindow: BrowserWindow): void {
+  if (targetWindow.isDestroyed()) return;
+  if (novelFlushCloseTimer) clearTimeout(novelFlushCloseTimer);
+  novelFlushCloseTimer = null;
+  isClosingAfterNovelFlush = true;
+  targetWindow.close();
+}
+
 function registerIpcHandlers(): void {
   ipcMain.handle('app:get-version', () => app.getVersion());
   ipcMain.handle('app:get-platform', () => process.platform);
@@ -566,6 +584,10 @@ function registerIpcHandlers(): void {
   ipcMain.handle('novel:load-novel', (_event, id: unknown) => loadNovel(id));
   ipcMain.handle('novel:save-novel', (_event, novel: unknown) => saveNovel(novel));
   ipcMain.handle('novel:delete-novel', (_event, id: unknown) => deleteNovel(id));
+  ipcMain.handle('novel:flush-before-close-done', (event) => {
+    const targetWindow = BrowserWindow.fromWebContents(event.sender);
+    if (targetWindow) closeAfterNovelFlush(targetWindow);
+  });
   ipcMain.handle('app:select-generated-images-directory', async (_event, currentPath: unknown): Promise<{ ok: boolean; message: string; path?: string }> => {
     const options: OpenDialogOptions = {
       title: '选择图片保存位置',
@@ -1015,25 +1037,6 @@ function shouldRetryWithV1(response: Response): boolean {
 
 function shouldRetryWithoutResponseFormat(message?: string): boolean {
   return /response_?format|unsupported|unknown parameter|invalid parameter|不支持|未知参数/i.test(message ?? '');
-}
-
-function cancelOpenAiCompatibleImageGeneration(requestId: unknown): ApiImageGenerationCancelResult {
-  if (typeof requestId !== 'string' || !requestId.trim()) {
-    return { ok: false, message: '生图请求 ID 缺失。' };
-  }
-
-  const normalizedRequestId = requestId.trim();
-  const controller = imageGenerationControllers.get(normalizedRequestId);
-
-  if (!controller) {
-    return { ok: false, message: '未找到正在进行的生图请求。' };
-  }
-
-  controller.abort();
-  imageGenerationControllers.delete(normalizedRequestId);
-  timedOutImageGenerationRequests.delete(normalizedRequestId);
-
-  return { ok: true, message: '已取消生图请求。' };
 }
 
 function normalizeImageCount(count: number | undefined): number | null {
