@@ -1,6 +1,6 @@
 import type { Chapter, Novel } from '../../types/novel';
 
-type TextMessage = { role: 'system' | 'user'; content: string };
+export type TextMessage = { role: 'system' | 'user'; content: string };
 
 export function buildContinueChapterPrompt(novel: Novel, chapter: Chapter): TextMessage[] {
   const tail = chapter.content.slice(-1500);
@@ -103,7 +103,49 @@ export interface ParsedOutlineChapter {
   outline: string;
 }
 
-const OUTLINE_HEADER_PATTERN = /^[\s#*>-]*(?:第\s*[0-9０-９一二两三四五六七八九十百千零〇]+\s*[章回节]|(?:Chapter|chapter)\s*\d+|\d+\s*[.、．])\s*(.*)$/;
+export type InspirationChatMessage = { role: 'ai' | 'user'; text: string };
+
+export const INSPIRATION_OPENING_MESSAGE = '灵感像猫，总在不经意间跳上你的书桌。别慌，我手里正好有根故事逗猫棒。告诉我，它这次给你留下了什么？一个画面，一句对白，还是一种挥之不去的感觉？';
+
+function formatInspirationTranscript(history: InspirationChatMessage[]): string {
+  return history.map((message) => `${message.role === 'ai' ? '文思' : '用户'}：${message.text}`).join('\n');
+}
+
+export function buildInspirationChatPrompt(history: InspirationChatMessage[]): TextMessage[] {
+  const userTurns = history.filter((message) => message.role === 'user').length;
+  const stageHint = userTurns >= 4
+    ? '灵感信息已经比较充分，请先简短回应用户，再在结尾主动建议用户点击「生成蓝图」进入下一步。'
+    : '请先简短回应用户的想法，再围绕故事类型、主角、核心冲突、基调、结局方向中尚未明确的部分，提出一个具体的问题引导用户补充。';
+  return [
+    { role: 'system', content: '你是小说灵感助手「文思」，语气亲切自然、带一点文学气息。每次回复 80-160 字，只输出对话内容本身，不用列表，不用 Markdown，不加引号和角色前缀。' },
+    {
+      role: 'user',
+      content: [
+        '以下是你（文思）和用户到目前为止的对话记录：',
+        formatInspirationTranscript(history),
+        `这是用户的第 ${userTurns} 轮输入。${stageHint}`,
+        '请以文思的身份直接输出给用户的回复。',
+      ].join('\n'),
+    },
+  ];
+}
+
+export function buildBlueprintFromConversationPrompt(history: InspirationChatMessage[]): TextMessage[] {
+  return [
+    { role: 'system', content: '你是小说策划助手，根据灵感对话输出作品蓝图。直接输出蓝图内容，不解释，不加标题，不使用 Markdown 标记。' },
+    {
+      role: 'user',
+      content: [
+        '以下是用户与灵感助手「文思」的对话记录：',
+        formatInspirationTranscript(history),
+        '请基于对话中的灵感写一段作品蓝图，依次覆盖：题材与基调、核心冲突、主要角色（2-4 人，含姓名与动机）、世界观要点、整体故事走向。对话中用户明确表达的设定必须保留。',
+        '用连贯的中文段落书写，总长度 300-500 字。',
+      ].join('\n'),
+    },
+  ];
+}
+
+const OUTLINE_HEADER_PATTERN =/^[\s#*>-]*(?:第\s*[0-9０-９一二两三四五六七八九十百千零〇]+\s*[章回节]|(?:Chapter|chapter)\s*\d+|\d+\s*[.、．])\s*(.*)$/;
 
 export function parseOutlineText(text: string): ParsedOutlineChapter[] {
   const chapters: ParsedOutlineChapter[] = [];

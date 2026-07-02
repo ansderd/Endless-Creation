@@ -1,8 +1,8 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import { rendererBridge } from '../../services/rendererBridge';
 import { novelService } from '../../services/novelService';
 import type { Chapter, Novel, NovelSummary } from '../../types/novel';
-import { buildBlueprintPrompt, buildChapterFromOutlinePrompt, buildContinueChapterPrompt, buildOutlinePrompt, buildPolishChapterPrompt, buildRewriteChapterPrompt, parseOutlineText } from './novelPrompts';
+import { buildBlueprintFromConversationPrompt, buildBlueprintPrompt, buildChapterFromOutlinePrompt, buildContinueChapterPrompt, buildInspirationChatPrompt, buildOutlinePrompt, buildPolishChapterPrompt, buildRewriteChapterPrompt, INSPIRATION_OPENING_MESSAGE, parseOutlineText, type InspirationChatMessage, type TextMessage } from './novelPrompts';
 import './NovelCreation.css';
 
 type SaveStatus = 'saved' | 'dirty' | 'saving' | 'failed';
@@ -10,6 +10,9 @@ type TextGenerationStatus = 'idle' | 'generating' | 'failed';
 type AiDraftAction = 'continue' | 'polish' | 'rewrite' | 'outline';
 type AiDraftSource = { type: 'insert' } | { type: 'chapter'; chapterId: string } | { type: 'selection'; chapterId: string; start: number; end: number; text: string } | { type: 'outline'; chapterId: string; content: string; updatedAt: string };
 type WizardStep = 'idea' | 'blueprint' | 'outline';
+type NovelView = 'creationCenter' | 'inspirationIntro' | 'inspirationPreparing' | 'inspirationChat' | 'inspirationBlueprint' | 'inspirationOutline' | 'workbench';
+type InspirationBusy = 'idle' | 'chat' | 'blueprint' | 'outline';
+type ChatBubble = InspirationChatMessage & { id: string };
 type NovelForm = { title: string; summary: string; note: string };
 interface ModelPreferences { textModel?: string; textModels?: string[]; }
 interface ApiProviderChannel { id: string; name?: string; baseUrl?: string; apiKey?: string; apiFormat?: string; enabled?: boolean; models?: string[]; }
@@ -18,6 +21,7 @@ interface ApiProviderStore { channels?: ApiProviderChannel[]; activeChannelId?: 
 const emptyForm: NovelForm = { title: '', summary: '', note: '' };
 const MODEL_PREFERENCES_STORAGE_KEY = 'endless-creation.model-preferences';
 const API_PROVIDER_STORAGE_KEY = 'endless-creation.api-provider-config';
+const INSPIRATION_STAGES = ['灵感收集', '故事核心', '角色冲突', '蓝图确认'];
 
 export function NovelCreation() {
   const [summaries, setSummaries] = useState<NovelSummary[]>([]);
@@ -42,6 +46,14 @@ export function NovelCreation() {
   const [wizardStatus, setWizardStatus] = useState<TextGenerationStatus>('idle');
   const [wizardError, setWizardError] = useState('');
   const [wizardNotice, setWizardNotice] = useState('');
+  const [view, setView] = useState<NovelView>('creationCenter');
+  const [chatMessages, setChatMessages] = useState<ChatBubble[]>([]);
+  const [chatInput, setChatInput] = useState('');
+  const [inspirationBusy, setInspirationBusy] = useState<InspirationBusy>('idle');
+  const [inspirationError, setInspirationError] = useState('');
+  const [inspirationBlueprintDraft, setInspirationBlueprintDraft] = useState('');
+  const [inspirationOutlineDraft, setInspirationOutlineDraft] = useState('');
+  const [blueprintConfirmed, setBlueprintConfirmed] = useState(false);
   const chapterTitleRef = useRef<HTMLInputElement | null>(null);
   const editorRef = useRef<HTMLTextAreaElement | null>(null);
   const revisionRef = useRef(0);
@@ -51,12 +63,22 @@ export function NovelCreation() {
   const textGenerationRunRef = useRef(0);
   const wizardRequestIdRef = useRef<string | null>(null);
   const wizardRunRef = useRef(0);
+  const inspirationRequestIdRef = useRef<string | null>(null);
+  const inspirationRunRef = useRef(0);
+  const chatEndRef = useRef<HTMLDivElement | null>(null);
+  const chatInputRef = useRef<HTMLTextAreaElement | null>(null);
 
   const chapters = useMemo(() => [...(currentNovel?.chapters ?? [])].sort((a, b) => a.order - b.order), [currentNovel]);
   const activeChapter = chapters.find((chapter) => chapter.id === activeChapterId) ?? null;
   const currentChapterWords = countWords(activeChapter?.content ?? '');
   const totalWords = chapters.reduce((sum, chapter) => sum + countWords(chapter.content), 0);
   const selectedTextModel = useMemo(() => resolveTextModel(modelPreferences, apiProviderStore), [apiProviderStore, modelPreferences]);
+  const chatUserTurns = chatMessages.filter((message) => message.role === 'user').length;
+  const chatStage = Math.min(chatUserTurns, INSPIRATION_STAGES.length - 1);
+
+  useEffect(() => {
+    if (view === 'inspirationChat') chatEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+  }, [chatMessages, inspirationBusy, view]);
 
   useEffect(() => {
     void loadSummaries();
@@ -487,14 +509,14 @@ export function NovelCreation() {
     if (requestId) void rendererBridge.cancelTextGeneration(requestId);
   }
 
-  function confirmWizardOutline() {
-    if (!currentNovel) return;
-    const parsed = parseOutlineText(wizardOutline);
+  function applyParsedOutline(outlineText: string, onIssue: (message: string) => void): boolean {
+    if (!currentNovel) return false;
+    const parsed = parseOutlineText(outlineText);
     if (!parsed.length) {
-      setWizardError('未能从大纲文本解析出章节，请把每章调整为「第1章 标题」+「大纲：…」两行的格式后重试，或取消后手动创建章节。');
-      return;
+      onIssue('未能从大纲文本解析出章节，请把每章调整为「第1章 标题」+「大纲：…」两行的格式后重试。');
+      return false;
     }
-    if (currentNovel.chapters.length && !window.confirm(`确认后将用 ${parsed.length} 个新章节替换现有 ${currentNovel.chapters.length} 个章节，现有章节及正文将被删除。确定继续吗？`)) return;
+    if (currentNovel.chapters.length && !window.confirm(`确认后将用 ${parsed.length} 个新章节替换现有 ${currentNovel.chapters.length} 个章节，现有章节及正文将被删除。确定继续吗？`)) return false;
     const now = new Date().toISOString();
     const nextChapters: Chapter[] = parsed.map((item, index) => ({
       id: createId('chapter'),
@@ -507,18 +529,290 @@ export function NovelCreation() {
     }));
     updateNovel((novel) => ({ ...novel, chapters: nextChapters, updatedAt: now }));
     setActiveChapterId(nextChapters[0]?.id ?? null);
+    return true;
+  }
+
+  function confirmWizardOutline() {
+    if (!currentNovel) return;
+    if (!applyParsedOutline(wizardOutline, setWizardError)) return;
     setWizardStep(null);
     setWizardError('');
     setWizardNotice('');
   }
 
+  function openCreationCenter() {
+    cancelInspirationGeneration();
+    setInspirationError('');
+    setView('creationCenter');
+  }
+
+  function startInspirationIntro() {
+    setInspirationError('');
+    setView('inspirationIntro');
+  }
+
+  function startInspirationSession() {
+    if (!chatMessages.length) resetInspirationConversation();
+    setView('inspirationPreparing');
+    window.setTimeout(() => {
+      setView((current) => current === 'inspirationPreparing' ? 'inspirationChat' : current);
+    }, 600);
+  }
+
+  function resetInspirationConversation() {
+    cancelInspirationGeneration();
+    setChatMessages([{ id: createId('chat'), role: 'ai', text: INSPIRATION_OPENING_MESSAGE }]);
+    setChatInput('');
+    setInspirationError('');
+    setInspirationBlueprintDraft('');
+    setInspirationOutlineDraft('');
+    setBlueprintConfirmed(false);
+  }
+
+  function resetInspirationChat() {
+    if (chatUserTurns > 0 && !window.confirm('重置将清空当前对话内容，确定吗？')) return;
+    resetInspirationConversation();
+  }
+
+  function cancelInspirationGeneration() {
+    const requestId = inspirationRequestIdRef.current;
+    inspirationRunRef.current += 1;
+    inspirationRequestIdRef.current = null;
+    setInspirationBusy('idle');
+    if (requestId) void rendererBridge.cancelTextGeneration(requestId);
+  }
+
+  async function generateInspirationText(kind: 'chat' | 'blueprint' | 'outline', messages: TextMessage[]): Promise<string | null> {
+    const readyModel = ensureTextModelReady(setInspirationError);
+    if (!readyModel) return null;
+    const requestId = createId('text-request');
+    const runId = inspirationRunRef.current + 1;
+    inspirationRunRef.current = runId;
+    inspirationRequestIdRef.current = requestId;
+    setInspirationBusy(kind);
+    setInspirationError('');
+    const result = await rendererBridge.generateText({
+      requestId,
+      channelId: readyModel.channel.id,
+      channelLabel: readyModel.channel.name,
+      baseUrl: readyModel.baseUrl,
+      apiKey: readyModel.apiKey,
+      model: readyModel.model,
+      messages,
+      temperature: kind === 'chat' ? 0.9 : kind === 'blueprint' ? 0.85 : 0.7,
+      maxTokens: kind === 'chat' ? 500 : kind === 'blueprint' ? 1000 : 2000,
+    });
+    if (inspirationRunRef.current !== runId) return null;
+    inspirationRequestIdRef.current = null;
+    setInspirationBusy('idle');
+    if (!result.ok || !result.text) {
+      setInspirationError(result.message || '文思暂时没能接上话，请稍后重试。');
+      return null;
+    }
+    return result.text;
+  }
+
+  async function sendInspirationMessage() {
+    const text = chatInput.trim();
+    if (!text || inspirationBusy !== 'idle') return;
+    const nextMessages: ChatBubble[] = [...chatMessages, { id: createId('chat'), role: 'user', text }];
+    setChatMessages(nextMessages);
+    setChatInput('');
+    const reply = await generateInspirationText('chat', buildInspirationChatPrompt(nextMessages));
+    if (reply === null) return;
+    setChatMessages((current) => [...current, { id: createId('chat'), role: 'ai', text: reply }]);
+  }
+
+  function handleChatKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
+    if (event.key !== 'Enter' || event.shiftKey || event.nativeEvent.isComposing) return;
+    event.preventDefault();
+    void sendInspirationMessage();
+  }
+
+  function collectInspirationIdea(): string {
+    return chatMessages.filter((message) => message.role === 'user').map((message) => message.text).join('\n');
+  }
+
+  async function generateInspirationBlueprint() {
+    if (inspirationBusy !== 'idle') return;
+    if (!chatUserTurns) {
+      setInspirationError('先和文思聊聊你的灵感，再生成蓝图。');
+      return;
+    }
+    const text = await generateInspirationText('blueprint', buildBlueprintFromConversationPrompt(chatMessages));
+    if (text === null) return;
+    setInspirationBlueprintDraft(text);
+    setBlueprintConfirmed(false);
+    setView('inspirationBlueprint');
+  }
+
+  async function confirmInspirationBlueprint() {
+    if (!inspirationBlueprintDraft.trim()) return;
+    const idea = collectInspirationIdea();
+    const blueprint = inspirationBlueprintDraft;
+    const now = new Date().toISOString();
+    if (currentNovel) {
+      updateNovel((novel) => ({ ...novel, idea, blueprint, updatedAt: now }));
+      setBlueprintConfirmed(true);
+      return;
+    }
+    const result = await novelService.createNovel({ title: '' });
+    if (!result.ok || !result.novel) {
+      setInspirationError(result.message || '创建小说失败，请稍后重试。');
+      return;
+    }
+    revisionRef.current += 1;
+    setCurrentNovel({ ...result.novel, idea, blueprint, updatedAt: now });
+    setActiveChapterId(null);
+    setSaveStatus('dirty');
+    setBlueprintConfirmed(true);
+    void loadSummaries();
+  }
+
+  async function generateInspirationOutline() {
+    if (!currentNovel || inspirationBusy !== 'idle') return;
+    const text = await generateInspirationText('outline', buildOutlinePrompt({ ...currentNovel, idea: collectInspirationIdea(), blueprint: inspirationBlueprintDraft }));
+    if (text === null) return;
+    setInspirationOutlineDraft(text);
+    setView('inspirationOutline');
+  }
+
+  function confirmInspirationOutline() {
+    if (!currentNovel) return;
+    if (!applyParsedOutline(inspirationOutlineDraft, setInspirationError)) return;
+    setInspirationError('');
+    setView('workbench');
+  }
+
   return (
-    <main className="novel-creation" aria-label="小说创作">
+    <main className={view === 'workbench' ? 'novel-creation' : 'novel-creation novel-creation--flow'} aria-label="小说创作">
+      {view === 'creationCenter' && (
+        <section className="novel-center" aria-label="创作中心">
+          <header className="novel-center__head">
+            <p>Novel Studio</p>
+            <h1>创作中心</h1>
+            <span>从一次对话开始，或回到你的书桌。</span>
+          </header>
+          <div className="novel-center__cards">
+            <article className="novel-center__card novel-center__card--inspiration">
+              <h2>灵感模式</h2>
+              <p>通过对话梳理故事灵感，并进入蓝图、大纲与章节正文。</p>
+              <button className="novel-flow__primary" onClick={startInspirationIntro} type="button">开启灵感模式</button>
+            </article>
+            <article className="novel-center__card">
+              <h2>小说工作台</h2>
+              <p>查看、编辑和管理本地小说与章节。</p>
+              <span className="novel-center__meta">{summaries.length ? `最近编辑：《${summaries[0].title}》` : '暂无本地小说'}</span>
+              <button className="novel-flow__primary" onClick={() => setView('workbench')} type="button">进入工作台</button>
+            </article>
+          </div>
+        </section>
+      )}
+      {view === 'inspirationIntro' && (
+        <section className="novel-intro" aria-label="灵感模式启动">
+          <div className="novel-intro__panel">
+            <p className="novel-intro__eyebrow">灵感模式</p>
+            <h1>小说家的新篇章</h1>
+            <p className="novel-intro__sub">和「文思」对话，整理你的故事种子，并生成可确认的创作蓝图。</p>
+            <div className="novel-intro__actions">
+              <button className="novel-flow__primary" onClick={startInspirationSession} type="button">开启灵感模式</button>
+              <button className="novel-flow__ghost" onClick={openCreationCenter} type="button">返回创作中心</button>
+            </div>
+          </div>
+        </section>
+      )}
+      {view === 'inspirationPreparing' && (
+        <section className="novel-preparing" aria-label="灵感空间准备中">
+          <span className="novel-preparing__pulse" aria-hidden="true" />
+          <h2>正在为你准备灵感空间</h2>
+          <p>文思正在整理对话上下文…</p>
+        </section>
+      )}
+      {view === 'inspirationChat' && (
+        <section className="novel-chat" aria-label="灵感对话">
+          <header className="novel-chat__bar">
+            <div className="novel-chat__bar-side">
+              <button className="novel-flow__ghost" onClick={() => setView('inspirationIntro')} type="button">返回</button>
+            </div>
+            <div className="novel-chat__bar-center">
+              <strong>与「文思」对话中...</strong>
+              <span className="novel-chat__stage">{INSPIRATION_STAGES[chatStage]} {chatStage + 1}/4</span>
+            </div>
+            <div className="novel-chat__bar-side novel-chat__bar-side--end">
+              <button className="novel-flow__ghost" onClick={resetInspirationChat} type="button">重置</button>
+              <button className="novel-flow__ghost" onClick={openCreationCenter} type="button">关闭</button>
+            </div>
+          </header>
+          <div className="novel-chat__messages">
+            {chatMessages.map((message) => (
+              <div className={message.role === 'ai' ? 'novel-chat__bubble novel-chat__bubble--ai' : 'novel-chat__bubble novel-chat__bubble--user'} key={message.id}>{message.text}</div>
+            ))}
+            {inspirationBusy === 'chat' && <div className="novel-chat__bubble novel-chat__bubble--ai novel-chat__bubble--pending">文思正在思考...</div>}
+            <div ref={chatEndRef} />
+          </div>
+          <footer className="novel-chat__composer">
+            {inspirationError && <p className="novel-flow__error">{inspirationError}</p>}
+            <div className="novel-chat__actions">
+              <button className="novel-flow__primary novel-flow__primary--compact" disabled={inspirationBusy !== 'idle' || !chatUserTurns} onClick={() => void generateInspirationBlueprint()} type="button">{inspirationBusy === 'blueprint' ? '生成蓝图中…' : '生成蓝图'}</button>
+              <button className="novel-flow__ghost" disabled={inspirationBusy !== 'idle'} onClick={() => chatInputRef.current?.focus()} type="button">继续对话</button>
+              {chatUserTurns >= 4 && inspirationBusy === 'idle' && <span className="novel-chat__ready">文思觉得灵感差不多了，可以生成蓝图</span>}
+            </div>
+            <div className="novel-chat__input">
+              <textarea ref={chatInputRef} value={chatInput} onChange={(event) => setChatInput(event.target.value)} onKeyDown={handleChatKeyDown} placeholder="告诉文思你的故事灵感、角色、冲突或世界设定..." rows={2} />
+              <button disabled={!chatInput.trim() || inspirationBusy !== 'idle'} onClick={() => void sendInspirationMessage()} type="button">发送</button>
+            </div>
+          </footer>
+        </section>
+      )}
+      {view === 'inspirationBlueprint' && (
+        <section className="novel-preview" aria-label="蓝图预览">
+          <header className="novel-preview__head">
+            <p className="novel-intro__eyebrow">灵感模式</p>
+            <h2>作品蓝图</h2>
+            <span>{blueprintConfirmed ? '蓝图已保存，可以继续生成章节大纲。' : '检查并润色文思为你整理的蓝图，确认后写入小说。'}</span>
+          </header>
+          <textarea className="novel-preview__editor" value={inspirationBlueprintDraft} onChange={(event) => { setInspirationBlueprintDraft(event.target.value); setBlueprintConfirmed(false); }} placeholder="作品蓝图…" />
+          {inspirationError && <p className="novel-flow__error">{inspirationError}</p>}
+          <footer className="novel-preview__actions">
+            {blueprintConfirmed ? (
+              <>
+                <button className="novel-flow__primary" disabled={inspirationBusy !== 'idle'} onClick={() => void generateInspirationOutline()} type="button">{inspirationBusy === 'outline' ? '生成大纲中…' : '生成章节大纲'}</button>
+                <button className="novel-flow__ghost" disabled={inspirationBusy !== 'idle'} onClick={() => setView('inspirationChat')} type="button">返回对话</button>
+              </>
+            ) : (
+              <>
+                <button className="novel-flow__primary" disabled={inspirationBusy !== 'idle' || !inspirationBlueprintDraft.trim()} onClick={() => void confirmInspirationBlueprint()} type="button">确认蓝图</button>
+                <button className="novel-flow__ghost" disabled={inspirationBusy !== 'idle'} onClick={() => void generateInspirationBlueprint()} type="button">{inspirationBusy === 'blueprint' ? '重新生成中…' : '重新生成'}</button>
+                <button className="novel-flow__ghost" disabled={inspirationBusy !== 'idle'} onClick={() => setView('inspirationChat')} type="button">返回对话</button>
+              </>
+            )}
+          </footer>
+        </section>
+      )}
+      {view === 'inspirationOutline' && (
+        <section className="novel-preview" aria-label="大纲预览">
+          <header className="novel-preview__head">
+            <p className="novel-intro__eyebrow">灵感模式</p>
+            <h2>章节大纲</h2>
+            <span>确认后将按大纲生成章节列表，正文留空，由你逐章创作。</span>
+          </header>
+          <textarea className="novel-preview__editor" value={inspirationOutlineDraft} onChange={(event) => setInspirationOutlineDraft(event.target.value)} placeholder="章节大纲，每章两行：第1章 标题 / 大纲：…" />
+          {inspirationError && <p className="novel-flow__error">{inspirationError}</p>}
+          <footer className="novel-preview__actions">
+            <button className="novel-flow__primary" disabled={inspirationBusy !== 'idle' || !inspirationOutlineDraft.trim()} onClick={confirmInspirationOutline} type="button">确认生成章节</button>
+            <button className="novel-flow__ghost" disabled={inspirationBusy !== 'idle'} onClick={() => void generateInspirationOutline()} type="button">{inspirationBusy === 'outline' ? '重新生成中…' : '重新生成'}</button>
+            <button className="novel-flow__ghost" disabled={inspirationBusy !== 'idle'} onClick={() => setView('inspirationBlueprint')} type="button">返回蓝图</button>
+          </footer>
+        </section>
+      )}
+      {view === 'workbench' && (
+        <>
       <section className="novel-creation__list">
         <header>
           <div><p>Novel Studio</p><h1>小说创作</h1></div>
           <button onClick={() => { setForm(emptyForm); setModalMode('create'); }} type="button">新建小说</button>
         </header>
+        <button className="novel-list__inspiration" onClick={startInspirationIntro} type="button">从灵感开始</button>
         {isLoading ? <EmptyState title="正在加载小说…" /> : summaries.length ? (
           <div className="novel-list">
             {summaries.map((novel) => (
@@ -603,6 +897,8 @@ export function NovelCreation() {
             {wizardError && <p className="novel-wizard__error">{wizardError}</p>}
           </div>
         </div>
+      )}
+        </>
       )}
     </main>
   );
